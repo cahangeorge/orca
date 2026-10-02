@@ -1,4 +1,8 @@
 import {
+  projectConversationWorkPhase,
+  type ConversationWorkPhaseEvidence
+} from './conversation-work-phase'
+import {
   AGENT_STATUS_MAX_FIELD_LENGTH,
   normalizeOptionalField,
   normalizePromptField
@@ -256,6 +260,7 @@ export function latestStructuredAgentSessionAssistantMessage(
 /** The activity fields a sidebar row shows beside the prompt, named as the agent-status
  *  entry names them so the client can hand them straight to a row. */
 export type StructuredAgentSessionStatusProjection = {
+  workPhase?: ConversationWorkPhaseEvidence
   status: StructuredAgentSessionProjectedStatus | null
   latestPrompt: string
   /** Present only while a turn is running — see showsAgentToolPreview, which reads
@@ -329,6 +334,7 @@ export function projectStructuredAgentSessionStatusState(
     owesWork: status !== 'idle' && owesStructuredAgentSessionWork(items, submissions, currentFence),
     summary: {
       status,
+      workPhase: projectConversationWorkPhase(items, true),
       latestPrompt: normalizePromptField(latestStructuredAgentSessionPrompt(items)),
       ...(toolName ? { toolName } : {}),
       ...(toolInput ? { toolInput } : {}),

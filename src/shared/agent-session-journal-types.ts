@@ -118,6 +118,8 @@ export type AgentJournalToolCallItem = NativeChatToolMetadata & {
 }
 
 export type AgentJournalDiffItem = {
+  /** Provider-confirmed successful edit; absent on previews and older journals. */
+  editConfirmed?: boolean
   kind: 'diff'
   path: string
   patch: AgentJournalBoundedPayload

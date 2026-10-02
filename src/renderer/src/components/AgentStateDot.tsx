@@ -150,6 +150,7 @@ export const AgentStateDot = React.memo(function AgentStateDot({
         aria-label={agentStateLabel(state)}
       >
         <span
+          data-agent-state-dot=""
           className={cn(
             'block rounded-full',
             inner,

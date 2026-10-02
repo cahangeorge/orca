@@ -137,6 +137,7 @@ function fileChangeItem(item: CodexThreadItem): CodexJournalItem {
   return {
     body: {
       kind: 'diff',
+      editConfirmed: commandState(item) === 'completed',
       path: changes.length === 1 ? changes[0]!.path : `${changes.length} files`,
       patch: bounded
     },
@@ -320,7 +321,7 @@ export function codexStreamingJournalItem(item: CodexThreadItem, text: string): 
       : null
     const bounded = boundInlineText(text, DEFAULT_JOURNAL_PAYLOAD_LIMITS).bounded
     return {
-      body: { kind: 'diff', path: path ?? 'pending patch', patch: bounded },
+      body: { kind: 'diff', path: path ?? 'pending patch', patch: bounded, editConfirmed: false },
       handled: true
     }
   }

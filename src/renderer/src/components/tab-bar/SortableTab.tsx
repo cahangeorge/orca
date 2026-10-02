@@ -1,3 +1,4 @@
+import { useConversationTabPresentation } from './use-conversation-tab-presentation'
 import { useCallback, useEffect, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { X, Minimize2, Pin } from 'lucide-react'
@@ -32,6 +33,7 @@ import {
 
 type SortableTabProps = {
   tab: TerminalTab
+  conversationSessionId?: string
   unifiedTabId: string
   groupId: string
   tabCount: number
@@ -65,6 +67,7 @@ export const CLOSE_ALL_CONTEXT_MENUS_EVENT = 'orca-close-all-context-menus'
 
 export default function SortableTab({
   tab,
+  conversationSessionId,
   unifiedTabId,
   groupId,
   tabCount,
@@ -116,7 +119,10 @@ export default function SortableTab({
   // Why: use hook status + title evidence so the icon reflects the harness running now, not just the launch command.
   const tabAgent = useTabAgent(tab)
 
-  // Why: with a provider icon shown, strip the agent's own leading glyph so the tab doesn't show two icons for one agent.
+  const { presentation, statusIconEnabled, visibleActivityStatus, phaseTooltip } =
+    useConversationTabPresentation(tab, conversationSessionId, tabAgent, activityStatus)
+
+  // Why: with a provider icon shown, strip the agent's own leading glyph.
   const displayTitle =
     tab.customTitle ?? (tabAgent ? stripLeadingAgentTitleDecoration(tab.title) : tab.title)
 
@@ -181,6 +187,8 @@ export default function SortableTab({
       ref={setNodeRef}
       data-testid="sortable-tab"
       data-tab-id={tab.id}
+      data-conversation-phase={tabAgent === 'codex' ? (presentation.phase ?? 'unknown') : undefined}
+      style={{ backgroundColor: presentation.backgroundColor, color: presentation.color }}
       data-tab-title={tabTitle}
       data-pinned={isPinned ? 'true' : 'false'}
       // Why: DOM attribute lets E2E assert real selection state; a store-only check would miss render breaks (PR #1186 shipped in #1193).
@@ -231,9 +239,12 @@ export default function SortableTab({
       )}
       <TerminalTabLeadingIcon
         agent={tabAgent}
-        activityStatus={activityStatus}
+        activityStatus={
+          statusIconEnabled || tabAgent !== 'codex' ? visibleActivityStatus : 'inactive'
+        }
         shell={shellForIcon}
-        showUnreadActivity={showUnreadActivity}
+        showUnreadActivity={showUnreadActivity && (statusIconEnabled || tabAgent !== 'codex')}
+        showNeutralStatus={tabAgent === 'codex' && statusIconEnabled}
         isActive={isActive}
       />
       {isPinned && !isEditing && (
@@ -293,10 +304,11 @@ export default function SortableTab({
             className="max-w-80 whitespace-normal break-words text-left"
           >
             {displayTitle}
+            {tabAgent === 'codex' ? <div>{phaseTooltip}</div> : null}
           </TooltipContent>
         </Tooltip>
       )}
-      {tab.color && !isEditing && (
+      {tab.color && tabAgent !== 'codex' && !isEditing && (
         <span
           className="mr-1.5 size-2 rounded-full shrink-0"
           style={{ backgroundColor: tab.color }}
@@ -380,6 +392,7 @@ export default function SortableTab({
 
       <SortableTabContextMenu
         tab={tab}
+        conversationPhaseSupported={tabAgent === 'codex'}
         unifiedTabId={unifiedTabId}
         groupId={groupId}
         isActive={isActive}

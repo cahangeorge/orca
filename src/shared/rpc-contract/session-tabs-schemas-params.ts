@@ -1,3 +1,4 @@
+import { CONVERSATION_WORK_PHASES } from '../conversation-work-phase'
 import { z } from 'zod'
 import { RUNTIME_NAVIGATION_TARGETS } from '../runtime-navigation'
 import { TAB_ACTIVATION_INTENTS } from '../tab-activation-intent'
@@ -127,6 +128,7 @@ export const SetTabProps = WorktreeTabSelector.extend({
     .transform((v) => (typeof v === 'string' ? v : ''))
     .pipe(z.string().min(1, 'Missing tab id')),
   // undefined = leave unchanged; null = clear color / unset.
+  manualWorkPhase: z.enum(CONVERSATION_WORK_PHASES).nullable().optional(),
   color: z.string().max(64).nullable().optional(),
   isPinned: z.boolean().optional(),
   // undefined = leave unchanged; no "clear" semantic (absence means default 'terminal').

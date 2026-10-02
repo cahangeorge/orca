@@ -1,3 +1,4 @@
+import { AgentTabPresentationSettings } from './AgentTabPresentationSettings'
 import { useMemo } from 'react'
 import { Info } from 'lucide-react'
 import type { GlobalSettings } from '../../../../shared/global-settings-types'
@@ -260,6 +261,7 @@ export function AgentsPane({
         <CodexTerminalServerIsolationSetting settings={settings} updateSettings={updateSettings} />
       ) : null}
       <AgentGeneratedTabTitlesSetting settings={settings} updateSettings={updateSettings} />
+      <AgentTabPresentationSettings settings={settings} updateSettings={updateSettings} />
       {!isPairedWebClientWindow() ? (
         <AgentAwakeSetting settings={settings} updateSettings={updateSettings} />
       ) : null}

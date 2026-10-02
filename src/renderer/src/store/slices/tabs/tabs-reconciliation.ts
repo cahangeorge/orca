@@ -77,6 +77,7 @@ export function projectWorktreeTabModelReconciliation(
             ...(tab.generatedTitle?.trim() ? { generatedLabel: tab.generatedTitle.trim() } : {}),
             ...(tab.aiVaultTitle ? { aiVaultTitle: tab.aiVaultTitle } : {}),
             customLabel: tab.customTitle,
+            manualWorkPhase: tab.manualWorkPhase,
             color: tab.color,
             sortOrder: tab.sortOrder,
             createdAt: tab.createdAt

@@ -9,6 +9,7 @@ import type {
 import { parseAppSshPtyId } from '../../shared/ssh-pty-id'
 import { getRuntimeBrowserPageRegistry } from './runtime-browser-page-registry'
 import type { Tab } from '../../shared/tab-types'
+import { persistedSessionTabPresentation } from './saved-structured-agent-session-restoration'
 import {
   resolveTerminalCloseTarget,
   terminalSurfaceCloseMutation,
@@ -82,12 +83,12 @@ export class OrcaRuntimeWithBuildHeadlessMobileSessionBrowserTabs extends OrcaRu
   protected getPersistedUnifiedSessionTabProps(
     worktreeId: string,
     tabId: string
-  ): Pick<Tab, 'color' | 'isPinned'> | null {
-    const tab =
-      this.getWorkspaceSessionForWorktree(worktreeId)?.unifiedTabs?.[worktreeId]?.find(
-        (candidate) => candidate.id === tabId || candidate.entityId === tabId
-      ) ?? null
-    return tab ? { color: tab.color, isPinned: tab.isPinned } : null
+  ): Pick<Tab, 'color' | 'isPinned' | 'manualWorkPhase'> | null {
+    return persistedSessionTabPresentation(
+      this.getWorkspaceSessionForWorktree(worktreeId),
+      worktreeId,
+      tabId
+    )
   }
 
   protected captureTerminalTabRetirement(worktreeId: string, tabId: string) {

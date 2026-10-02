@@ -1,3 +1,4 @@
+import type { ConversationWorkPhase } from '../../../shared/conversation-work-phase'
 import { toast } from 'sonner'
 import type { TerminalPaneSplitSource } from '../../../shared/feature-education-telemetry'
 import type { RuntimeRpcResponse } from '../../../shared/runtime-rpc-envelope'
@@ -237,6 +238,7 @@ export async function updateWebRuntimePaneLayout(args: {
 export function setWebRuntimeTabProps(args: {
   worktreeId: string
   tabId: string
+  manualWorkPhase?: ConversationWorkPhase | null
   color?: string | null
   isPinned?: boolean
   viewMode?: 'terminal' | 'chat'
@@ -261,6 +263,7 @@ export function setWebRuntimeTabProps(args: {
         params: {
           worktree: toRuntimeWorktreeSelector(args.worktreeId),
           tabId: hostTabId,
+          ...(args.manualWorkPhase !== undefined ? { manualWorkPhase: args.manualWorkPhase } : {}),
           ...(args.color !== undefined ? { color: args.color } : {}),
           ...(args.isPinned !== undefined ? { isPinned: args.isPinned } : {}),
           ...(args.viewMode !== undefined ? { viewMode: args.viewMode } : {})

@@ -1,4 +1,5 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
+import type { ConversationWorkPhase } from '../../shared/conversation-work-phase'
 import { OrcaRuntimeWithCloseHeadlessMobileTerminalTab } from './orca-runtime-close-headless-mobile-terminal-tab'
 import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
 import type {
@@ -15,7 +16,12 @@ export class OrcaRuntimeWithPersistHeadlessSessionTabProps extends OrcaRuntimeWi
   protected persistHeadlessSessionTabProps(
     worktreeId: string,
     tabId: string,
-    props: { color?: string | null; isPinned?: boolean; viewMode?: 'terminal' | 'chat' }
+    props: {
+      manualWorkPhase?: ConversationWorkPhase | null
+      color?: string | null
+      isPinned?: boolean
+      viewMode?: 'terminal' | 'chat'
+    }
   ): void {
     const session = this.getWorkspaceSessionForWorktree(worktreeId)
     if (!session || !this.store?.setWorkspaceSession) {
@@ -32,6 +38,9 @@ export class OrcaRuntimeWithPersistHeadlessSessionTabProps extends OrcaRuntimeWi
           tab.id === tabId
             ? {
                 ...tab,
+                ...(props.manualWorkPhase !== undefined
+                  ? { manualWorkPhase: props.manualWorkPhase }
+                  : {}),
                 ...(props.color !== undefined ? { color: props.color } : {}),
                 ...(props.isPinned !== undefined ? { isPinned: props.isPinned } : {}),
                 ...(props.viewMode !== undefined ? { viewMode: props.viewMode } : {})
@@ -50,6 +59,9 @@ export class OrcaRuntimeWithPersistHeadlessSessionTabProps extends OrcaRuntimeWi
           tab.id === tabId || tab.entityId === tabId
             ? {
                 ...tab,
+                ...(props.manualWorkPhase !== undefined
+                  ? { manualWorkPhase: props.manualWorkPhase }
+                  : {}),
                 ...(props.color !== undefined ? { color: props.color } : {}),
                 ...(props.isPinned !== undefined ? { isPinned: props.isPinned } : {})
               }
@@ -67,7 +79,12 @@ export class OrcaRuntimeWithPersistHeadlessSessionTabProps extends OrcaRuntimeWi
   protected applyHeadlessSessionTabPropsToSnapshot(
     worktreeId: string,
     tabId: string,
-    props: { color?: string | null; isPinned?: boolean; viewMode?: 'terminal' | 'chat' }
+    props: {
+      manualWorkPhase?: ConversationWorkPhase | null
+      color?: string | null
+      isPinned?: boolean
+      viewMode?: 'terminal' | 'chat'
+    }
   ): void {
     const snapshot = this.mobileSessionTabsByWorktree.get(worktreeId)
     if (!snapshot) {
@@ -81,6 +98,7 @@ export class OrcaRuntimeWithPersistHeadlessSessionTabProps extends OrcaRuntimeWi
       changed = true
       return {
         ...tab,
+        ...(props.manualWorkPhase !== undefined ? { manualWorkPhase: props.manualWorkPhase } : {}),
         ...(props.color !== undefined ? { color: props.color } : {}),
         ...(props.isPinned !== undefined ? { isPinned: props.isPinned } : {}),
         ...(props.viewMode !== undefined ? { viewMode: props.viewMode } : {})

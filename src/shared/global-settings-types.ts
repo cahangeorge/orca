@@ -422,6 +422,8 @@ export type GlobalSettings = {
   /** Dismissed freshness tuples: no write authority, just suppress re-nudging the same official placement/revision. */
   dismissedSkillFreshnessNudges?: string[]
   /** Why: generated tab titles are subjective, so they stay opt-in and manual renames win. */
+  tabAutoPhaseBackground: boolean
+  tabAgentStatusIcon: boolean
   tabAutoGenerateTitle: boolean
   /** Why: pinned tabs can still be closed via keyboard/native-menu; this gates that behind a confirmation. Defaults on. */
   confirmClosePinnedTab: boolean

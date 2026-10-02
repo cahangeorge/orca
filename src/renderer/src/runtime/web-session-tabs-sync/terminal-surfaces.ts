@@ -128,7 +128,14 @@ export function buildMirroredAgentTabs(
         // Why: a manual rename lives only on the client; re-nulling it here made
         // every host snapshot silently discard the user's title.
         customLabel: existing?.customLabel ?? null,
-        color: tab.color !== undefined ? tab.color : (existing?.color ?? null),
+        manualWorkPhase:
+          existing?.manualWorkPhase !== undefined ? existing.manualWorkPhase : tab.manualWorkPhase,
+        color:
+          existing?.manualWorkPhase === null && existing.color === null
+            ? null
+            : tab.color !== undefined
+              ? tab.color
+              : (existing?.color ?? null),
         sortOrder: sortOffset + index,
         createdAt: existing?.createdAt ?? now + sortOffset + index,
         isPinned: tab.isPinned !== undefined ? tab.isPinned : existing?.isPinned === true

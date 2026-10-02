@@ -41,3 +41,16 @@ export function collectSavedStructuredAgentSessionIds(
   }
   return selected
 }
+
+export function persistedSessionTabPresentation(
+  session: WorkspaceSessionState | null,
+  worktreeId: string,
+  tabId: string
+): Pick<Tab, 'color' | 'isPinned' | 'manualWorkPhase'> | null {
+  const tab = session?.unifiedTabs?.[worktreeId]?.find(
+    (candidate) => candidate.id === tabId || candidate.entityId === tabId
+  )
+  return tab
+    ? { color: tab.color, isPinned: tab.isPinned, manualWorkPhase: tab.manualWorkPhase }
+    : null
+}

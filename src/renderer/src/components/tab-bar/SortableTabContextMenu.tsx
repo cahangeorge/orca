@@ -1,3 +1,4 @@
+import { ConversationTabPhaseMenu } from './ConversationTabPhaseMenu'
 import {
   MessageSquare,
   PanelLeftClose,
@@ -89,6 +90,7 @@ const TAB_COLORS = [
 
 type SortableTabContextMenuProps = {
   tab: TerminalTab
+  conversationPhaseSupported?: boolean
   unifiedTabId: string
   groupId: string
   isActive: boolean
@@ -121,6 +123,7 @@ type SortableTabContextMenuProps = {
 
 export function SortableTabContextMenu({
   tab,
+  conversationPhaseSupported = false,
   unifiedTabId,
   groupId,
   isActive,
@@ -234,6 +237,12 @@ export function SortableTabContextMenu({
           {translate('auto.components.tab.bar.SortableTabContextMenu.2f697b3c31', 'Change Title')}
           {renameShortcut ? <DropdownMenuShortcut>{renameShortcut}</DropdownMenuShortcut> : null}
         </DropdownMenuItem>
+        {conversationPhaseSupported ? (
+          <ConversationTabPhaseMenu
+            unifiedTabId={unifiedTabId}
+            manualWorkPhase={tab.manualWorkPhase}
+          />
+        ) : null}
         <div className="px-2 pt-1.5 pb-1">
           <div className="text-xs font-medium text-muted-foreground mb-1.5">
             {translate('auto.components.tab.bar.SortableTabContextMenu.35e8892fd0', 'Tab Color')}

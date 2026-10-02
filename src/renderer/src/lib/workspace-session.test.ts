@@ -1,3 +1,4 @@
+import { parseWorkspaceSession } from '../../../shared/workspace-session-schema'
 import { describe, expect, it } from 'vitest'
 import { buildWorkspaceSessionPayload } from './workspace-session'
 import type { AppState } from '../store'
@@ -104,6 +105,51 @@ function createRepo(id: string, connectionId: string | null): AppState['repos'][
 }
 
 describe('buildWorkspaceSessionPayload', () => {
+  it('preserves manual phase through the real save payload and reload decoder', () => {
+    const terminal = {
+      id: 'tab-1',
+      worktreeId: 'wt-1',
+      title: 'Stable',
+      ptyId: null,
+      customTitle: null,
+      color: null,
+      manualWorkPhase: 'planning' as const,
+      sortOrder: 0,
+      createdAt: 1
+    }
+    const payload = buildWorkspaceSessionPayload(
+      createSnapshot({
+        tabsByWorktree: { 'wt-1': [terminal] },
+        unifiedTabsByWorktree: {
+          'wt-1': [
+            {
+              id: 'tab-1',
+              entityId: 'tab-1',
+              worktreeId: 'wt-1',
+              groupId: 'group',
+              contentType: 'terminal',
+              label: 'Stable',
+              customLabel: null,
+              color: null,
+              manualWorkPhase: 'planning',
+              sortOrder: 0,
+              createdAt: 1
+            }
+          ]
+        },
+        groupsByWorktree: {
+          'wt-1': [{ id: 'group', worktreeId: 'wt-1', tabOrder: ['tab-1'], activeTabId: 'tab-1' }]
+        }
+      })
+    )
+    const restored = parseWorkspaceSession(JSON.parse(JSON.stringify(payload)))
+    expect(restored.ok).toBe(true)
+    if (restored.ok) {
+      expect(restored.value.tabsByWorktree['wt-1'][0].manualWorkPhase).toBe('planning')
+      expect(restored.value.unifiedTabs?.['wt-1'][0].manualWorkPhase).toBe('planning')
+    }
+  })
+
   it('preserves activeWorktreeIdsOnShutdown for full replacement writes', () => {
     const payload = buildWorkspaceSessionPayload(createSnapshot())
 

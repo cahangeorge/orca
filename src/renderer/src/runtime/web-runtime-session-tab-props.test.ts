@@ -82,6 +82,7 @@ describe('setWebRuntimeTabProps', () => {
       setWebRuntimeTabProps({
         worktreeId: WORKTREE_ID,
         tabId: 'web-terminal-host-tab-1',
+        manualWorkPhase: 'verification',
         isPinned: true
       })
     ).toBe(true)
@@ -93,6 +94,7 @@ describe('setWebRuntimeTabProps', () => {
       params: {
         worktree: `id:${WORKTREE_ID}`,
         tabId: 'host-tab-1',
+        manualWorkPhase: 'verification',
         isPinned: true
       },
       timeoutMs: 15_000

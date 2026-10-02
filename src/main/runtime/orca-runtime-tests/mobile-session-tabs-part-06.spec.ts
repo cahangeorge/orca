@@ -296,12 +296,14 @@ describe('OrcaRuntimeService', () => {
     await runtime.setMobileSessionTabProps(`id:${TEST_WORKTREE_ID}`, {
       tabId: 'host-tab',
       color: '#ff8800',
+      manualWorkPhase: 'implementation',
       isPinned: true
     })
 
     const persisted = getSession().tabsByWorktree[TEST_WORKTREE_ID]!.find(
       (tab) => tab.id === 'host-tab'
     )!
+    expect(persisted.manualWorkPhase).toBe('implementation')
     expect(persisted.color).toBe('#ff8800')
     expect(persisted.isPinned).toBe(true)
 
@@ -311,6 +313,7 @@ describe('OrcaRuntimeService', () => {
     const surface = rehydrated.tabs.find(
       (tab) => tab.type === 'terminal' && tab.parentTabId === 'host-tab'
     )
+    expect(surface?.type === 'terminal' && surface.manualWorkPhase).toBe('implementation')
     expect(surface?.type === 'terminal' && surface.color).toBe('#ff8800')
     expect(surface?.type === 'terminal' && surface.isPinned).toBe(true)
   })

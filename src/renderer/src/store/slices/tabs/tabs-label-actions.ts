@@ -1,3 +1,4 @@
+import { createTabWorkPhaseAction } from './tab-work-phase-action'
 import { emitNativeChatToggled } from '@/lib/native-chat-telemetry'
 import type { TuiAgent } from '../../../../../shared/tui-agent'
 import type { TabsSlice, TabsSliceGet, TabsSliceSet } from './tabs-slice-contract'
@@ -20,10 +21,12 @@ export function createTabsLabelActions(
   | 'toggleTabViewMode'
   | 'setTabCustomLabel'
   | 'setUnifiedTabColor'
+  | 'setTabManualWorkPhase'
   | 'pinTab'
   | 'unpinTab'
 > {
   return {
+    setTabManualWorkPhase: createTabWorkPhaseAction(set, get),
     reorderUnifiedTabs: (groupId, tabIds, opts) => {
       let reordered = false
       set((state) => {

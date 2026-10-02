@@ -1,3 +1,4 @@
+import type { ConversationWorkPhase } from './conversation-work-phase'
 import type { AgentStatusEntry } from './agent-status-types'
 import type { BrowserCertificateFailure, BrowserLoadError } from './browser-workspace-types'
 import type { RuntimeBrowserPlacement } from './runtime-browser-placement'
@@ -22,6 +23,7 @@ export type RuntimeMobileSessionTerminalTab = {
   launchAgent?: TuiAgent
   startupCwd?: string
   parentLayout?: TerminalLayoutSnapshot
+  manualWorkPhase?: ConversationWorkPhase | null
   color?: string | null
   isPinned?: boolean
   viewMode?: 'terminal' | 'chat'
@@ -52,6 +54,7 @@ export type RuntimeMobileSessionMarkdownTab = {
   sourceFilePath: string
   sourceRelativePath: string
   documentVersion: string
+  manualWorkPhase?: ConversationWorkPhase | null
   color?: string | null
   isPinned?: boolean
 }
@@ -66,6 +69,7 @@ export type RuntimeMobileSessionFileTab = {
   mode?: 'edit' | 'diff'
   diffSource?: 'staged' | 'unstaged'
   isDirty: boolean
+  manualWorkPhase?: ConversationWorkPhase | null
   color?: string | null
   isPinned?: boolean
   isActive: boolean
@@ -86,6 +90,7 @@ export type RuntimeMobileSessionBrowserTab = {
   canGoForward: boolean
   loadError?: BrowserLoadError | null
   certificateFailure?: BrowserCertificateFailure | null
+  manualWorkPhase?: ConversationWorkPhase | null
   color?: string | null
   isPinned?: boolean
   isActive: boolean
@@ -98,6 +103,7 @@ export type RuntimeMobileSessionAgentTab = {
   sessionId: string
   replacesSessionId?: string
   agent: 'claude' | 'codex'
+  manualWorkPhase?: ConversationWorkPhase | null
   color?: string | null
   isPinned?: boolean
   isActive: boolean

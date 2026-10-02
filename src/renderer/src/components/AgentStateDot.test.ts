@@ -27,7 +27,8 @@ function renderMarkup(state: AgentDotState): string {
 
 function renderDotClassNames(state: AgentDotState): string[] {
   const markup = renderMarkup(state)
-  const dotClassName = markup.match(/<span class="([^"]*rounded-full[^"]*)"/)?.[1]
+  const dotMarkup = markup.match(/<span[^>]*data-agent-state-dot=""[^>]*>/)?.[0]
+  const dotClassName = dotMarkup?.match(/class="([^"]*)"/)?.[1]
 
   expect(dotClassName).toBeDefined()
 

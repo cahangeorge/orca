@@ -1,3 +1,4 @@
+import { Circle } from 'lucide-react'
 import { AgentStateDot } from '@/components/AgentStateDot'
 import { AgentIcon } from '@/lib/agent-catalog'
 import { cn } from '@/lib/utils'
@@ -13,6 +14,7 @@ import { translate } from '@/i18n/i18n'
 
 type TerminalTabLeadingIconProps = {
   agent: TuiAgent | null
+  showNeutralStatus?: boolean
   activityStatus: TerminalTabActivityStatus
   shell: TerminalTab['shellOverride']
   showUnreadActivity: boolean
@@ -45,6 +47,7 @@ function TerminalTabAgentIdentityIcon({
 /** Render a terminal tab's current state without hiding its agent or shell identity. */
 export function TerminalTabLeadingIcon({
   agent,
+  showNeutralStatus = false,
   activityStatus,
   shell,
   showUnreadActivity,
@@ -58,7 +61,10 @@ export function TerminalTabLeadingIcon({
           'auto.components.tab.bar.TerminalTabLeadingIcon.7ab2964bea',
           'Unread agent completion'
         )}
-        className="mr-1 inline-flex shrink-0 items-center gap-1"
+        className={cn(
+          'mr-1 inline-flex shrink-0 items-center gap-1',
+          agent === 'codex' && 'conversation-tab-agent-unread'
+        )}
       >
         <FilledBellIcon className="size-3 text-amber-500 drop-shadow-sm" />
         {agent ? <TerminalTabAgentIdentityIcon agent={agent} isActive={isActive} /> : null}
@@ -74,12 +80,30 @@ export function TerminalTabLeadingIcon({
       <span
         data-testid="tab-agent-activity-indicator"
         data-agent-activity-status={activityStatus}
-        className="mr-1 inline-flex shrink-0 items-center gap-1"
+        className={cn(
+          'mr-1 inline-flex shrink-0 items-center gap-1',
+          agent === 'codex' && 'conversation-tab-agent-state'
+        )}
       >
         <AgentStateDot state={dotState} size="md" />
         {/* Why: status and identity answer different questions. Keep the agent
             logo beside the state glyph so parallel tabs remain scannable. */}
         {agent ? <TerminalTabAgentIdentityIcon agent={agent} isActive={isActive} /> : null}
+      </span>
+    )
+  }
+
+  if (agent && showNeutralStatus) {
+    return (
+      <span
+        className="mr-1 inline-flex shrink-0 items-center gap-1"
+        data-testid="tab-agent-neutral-indicator"
+      >
+        <Circle
+          className="size-3 text-muted-foreground"
+          aria-label={translate('conversation.status.unknown', 'Inactive / unconfirmed')}
+        />
+        <TerminalTabAgentIdentityIcon agent={agent} isActive={isActive} />
       </span>
     )
   }

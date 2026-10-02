@@ -104,6 +104,7 @@ export function tabEqual(a: Tab, b: Tab): boolean {
     a.aiVaultTitle?.sessionId === b.aiVaultTitle?.sessionId &&
     a.aiVaultTitle?.title === b.aiVaultTitle?.title &&
     a.customLabel === b.customLabel &&
+    a.manualWorkPhase === b.manualWorkPhase &&
     a.color === b.color &&
     a.sortOrder === b.sortOrder &&
     a.createdAt === b.createdAt &&

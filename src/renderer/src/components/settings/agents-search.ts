@@ -1,3 +1,4 @@
+import { getAgentTabPresentationCopy } from './AgentTabPresentationSettings'
 import { getAgentCatalog } from '@/lib/agent-catalog'
 import {
   getAgentAwakeDescription,
@@ -75,6 +76,16 @@ const AGENT_RUNTIME_SEARCH_ENTRY_ID = 'agent-runtime'
 const CODEX_TERMINAL_SERVER_ISOLATION_SEARCH_ENTRY_ID = 'codex-terminal-server-isolation'
 
 const getAllAgentsPaneSearchEntries = createLocalizedCatalog(() => [
+  {
+    title: getAgentTabPresentationCopy().background,
+    description: getAgentTabPresentationCopy().backgroundDescription,
+    keywords: [getAgentTabPresentationCopy().background]
+  },
+  {
+    title: getAgentTabPresentationCopy().icon,
+    description: getAgentTabPresentationCopy().iconDescription,
+    keywords: [getAgentTabPresentationCopy().icon]
+  },
   {
     title: translate('auto.components.settings.agents.search.bb9ad95777', 'Agents'),
     description: translate(

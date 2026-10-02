@@ -118,6 +118,9 @@ export const SESSION_TAB_MUTATION_METHODS = [
       )
       return runtime.setMobileSessionTabProps(params.worktree, {
         tabId: params.tabId,
+        ...(params.manualWorkPhase !== undefined
+          ? { manualWorkPhase: params.manualWorkPhase }
+          : {}),
         ...(params.color !== undefined ? { color: params.color } : {}),
         ...(params.isPinned !== undefined ? { isPinned: params.isPinned } : {}),
         ...(params.viewMode !== undefined ? { viewMode: params.viewMode } : {})

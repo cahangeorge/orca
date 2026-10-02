@@ -325,6 +325,7 @@ describe('structured agent session status projection', () => {
       status: 'working',
       latestPrompt: 'look at the sidebar',
       toolName: 'Read',
+      workPhase: { phase: 'analysis', source: 'journal-tool', itemId: 'tool', sequence: 4 },
       toolInput: '/repo/src/WorktreeCard.tsx',
       lastAssistantMessage: 'Reading the card first.',
       statusStartedAt: 2

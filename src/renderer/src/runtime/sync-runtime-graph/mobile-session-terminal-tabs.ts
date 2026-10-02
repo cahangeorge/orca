@@ -103,6 +103,9 @@ export function buildMobileTerminalSurfaceTabs(
         : null
     return {
       type: 'terminal' as const,
+      ...(terminal.manualWorkPhase !== undefined
+        ? { manualWorkPhase: terminal.manualWorkPhase }
+        : {}),
       id: mobileTerminalSurfaceId(terminal.id, leafId),
       title,
       ...(tabWideFallbackSafe && terminal.quickCommandLabel?.trim()

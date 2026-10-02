@@ -58,6 +58,24 @@ describe('TabsSlice', () => {
       expect(store.getState().unifiedTabsByWorktree[WT][0].customLabel).toBeNull()
     })
 
+    it('sets manual phase and atomically resets both overrides without renaming', () => {
+      const tab = store.getState().createUnifiedTab(WT, 'terminal')
+      store.getState().setTabCustomLabel(tab.id, 'My stable title')
+      store.getState().setUnifiedTabColor(tab.id, 'var(--primary)')
+      store.getState().setTabManualWorkPhase(tab.id, 'implementation')
+      expect(store.getState().getTab(tab.id)).toMatchObject({
+        manualWorkPhase: 'implementation',
+        color: 'var(--primary)',
+        customLabel: 'My stable title'
+      })
+      store.getState().setTabManualWorkPhase(tab.id, null)
+      expect(store.getState().getTab(tab.id)).toMatchObject({
+        manualWorkPhase: null,
+        color: null,
+        customLabel: 'My stable title'
+      })
+    })
+
     it('setUnifiedTabColor updates color', () => {
       const tab = store.getState().createUnifiedTab(WT, 'terminal')
       store.getState().setUnifiedTabColor(tab.id, '#ff0000')

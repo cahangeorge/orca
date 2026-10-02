@@ -1,3 +1,4 @@
+import { CONVERSATION_WORK_PHASES } from './conversation-work-phase'
 /* Why: the workspace session JSON is written to disk by older builds and read
  * back by newer ones. A field type flip (e.g. ptyId going from string to an
  * object) or a truncated write could poison Zustand state and crash the
@@ -98,6 +99,7 @@ const terminalTabSchema = z.object({
     .catch(undefined),
   quickCommandLabel: z.string().nullable().optional(),
   customTitle: z.string().nullable(),
+  manualWorkPhase: z.enum(CONVERSATION_WORK_PHASES).nullable().optional().catch(undefined),
   color: z.string().nullable(),
   isPinned: z.boolean().optional(),
   // Why: recovery asks the terminal row who owns the surface, so a row that
@@ -147,6 +149,7 @@ const tabSchema = z.object({
     .catch(undefined),
   quickCommandLabel: z.string().nullable().optional(),
   customLabel: z.string().nullable(),
+  manualWorkPhase: z.enum(CONVERSATION_WORK_PHASES).nullable().optional().catch(undefined),
   color: z.string().nullable(),
   sortOrder: z.number(),
   createdAt: z.number(),

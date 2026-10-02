@@ -137,7 +137,11 @@ export class OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce extends OrcaRu
       }
       return
     }
+    const persistedProps =
+      this.getPersistedUnifiedSessionTabProps(input.workspaceId, id) ??
+      this.getPersistedUnifiedSessionTabProps(input.workspaceId, input.sessionId)
     const tab: RuntimeMobileSessionAgentTab = {
+      ...persistedProps,
       type: 'agent-session',
       id,
       title: defaultAgentChatLabel(input.agent),

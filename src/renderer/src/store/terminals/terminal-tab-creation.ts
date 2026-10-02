@@ -202,6 +202,7 @@ export function createTerminalTabCreationActions(
             ? { quickCommandLabel: tab.quickCommandLabel.trim() }
             : {}),
           customLabel: tab.customTitle,
+          manualWorkPhase: tab.manualWorkPhase,
           color: tab.color,
           sortOrder: cleanedGroupOrder.length,
           createdAt: tab.createdAt,

@@ -1,3 +1,4 @@
+import type { ConversationWorkPhaseEvidence } from './conversation-work-phase'
 import type {
   AgentSessionBackgroundTask,
   AgentSessionBackgroundTaskState
@@ -176,6 +177,7 @@ export type AgentSessionSubscribeEvent =
  *  from the journal so no client has to replay a transcript to learn whether a
  *  turn is running. Additive surface: an older host has no such method. */
 export type AgentSessionStatusSummary = {
+  workPhase?: ConversationWorkPhaseEvidence
   rewindBlockedReason?: AgentSessionRewindReason
   sessionId: string
   workspaceId: string

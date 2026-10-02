@@ -10,20 +10,17 @@
 // each chat is reopened. Restart is the one boundary that forgets, and restoring readable sessions
 // republishes them.
 
-import { agentProviderSessionsEqual } from '../../../shared/agent-session-resume'
+import { structuredAgentSessionStatusSummariesEqual } from './structured-agent-session-status-equality'
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
 import { normalizeOptionalField } from '../../../shared/agent-status-field-normalization'
-import { isAgentStatusHeldOpenByChildWork } from '../../../shared/agent-lead-status-fold'
 import { AGENT_MODEL_MAX_LENGTH } from '../../../shared/agent-status-types'
-import {
-  agentSessionBackgroundTasksEqual,
-  type AgentSessionBackgroundTaskState,
-  type AgentSessionStatusEvent,
-  type AgentSessionStatusSummary
+import type {
+  AgentSessionBackgroundTaskState,
+  AgentSessionStatusEvent,
+  AgentSessionStatusSummary
 } from '../../../shared/agent-session-wire'
 import type { AgentChildWorkEvidence } from '../../../shared/agent-status-child-work-evidence'
 import { projectStructuredAgentSessionStatusState } from '../../../shared/structured-agent-session-projection'
-import { structuredAgentSessionAgentStatus } from '../../../shared/structured-agent-session-agent-status'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import type { StructuredAgentSessionProviderChild } from './structured-agent-session-host-types'
 import { structuredAgentSessionProviderSessionMetadata } from './structured-agent-session-history-result'
@@ -64,47 +61,6 @@ export type StructuredAgentSessionStatusFeedDeps = {
   readBackgroundTasks?: (sessionId: string) => AgentSessionBackgroundTaskState | null | undefined
   /** The session's agent proved a start: its row's phase became `ready`. */
   onAgentStarted?: (sessionId: string) => void
-}
-
-function summariesEqual(a: AgentSessionStatusSummary, b: AgentSessionStatusSummary): boolean {
-  return (
-    a.workspaceId === b.workspaceId &&
-    a.agent === b.agent &&
-    a.status === b.status &&
-    a.hostExecutionOwned === b.hostExecutionOwned &&
-    a.hostExecutionPhase === b.hostExecutionPhase &&
-    a.hostExecutionChild?.generation === b.hostExecutionChild?.generation &&
-    a.hostExecutionChild?.fence === b.hostExecutionChild?.fence &&
-    a.rewindBlockedReason === b.rewindBlockedReason &&
-    // A moved state clock changes ranking; row activity alone, including a subagent's, does not.
-    // An idle state the journal cannot date still republishes, since readers date it by `updatedAt`,
-    // and so does one live child work holds open: readers take each publish as its evidence.
-    a.statusStartedAt === b.statusStartedAt &&
-    (a.status !== 'idle' ||
-      a.updatedAt === b.updatedAt ||
-      (a.statusStartedAt !== undefined && !isIdleHeldOpenByChildWork(b))) &&
-    a.latestPrompt === b.latestPrompt &&
-    a.model === b.model &&
-    a.toolName === b.toolName &&
-    a.toolInput === b.toolInput &&
-    a.lastAssistantMessage === b.lastAssistantMessage &&
-    a.turnOutcome === b.turnOutcome &&
-    agentSessionBackgroundTasksEqual(a.backgroundTasks, b.backgroundTasks) &&
-    agentProviderSessionsEqual(undefined, a.providerSession, b.providerSession)
-  )
-}
-
-function isIdleHeldOpenByChildWork(summary: AgentSessionStatusSummary): boolean {
-  return (
-    summary.status === 'idle' &&
-    isAgentStatusHeldOpenByChildWork(
-      structuredAgentSessionAgentStatus({
-        status: summary.status,
-        backgroundTasks: summary.backgroundTasks,
-        turnOutcome: summary.turnOutcome
-      })
-    )
-  )
 }
 
 /** Wire the host's own deps into a feed; keeps the host at one call site.
@@ -238,7 +194,7 @@ export class StructuredAgentSessionStatusFeed {
     }
     const summary = this.summaryFor(sessionId, session, journal ?? session.journal)
     const previous = this.published.get(sessionId)
-    if (previous && summariesEqual(previous, summary)) {
+    if (previous && structuredAgentSessionStatusSummariesEqual(previous, summary)) {
       if (!this.ownership.matchesLocation(sessionId, session.params.location)) {
         this.sink(summary, session.params.location)
       }

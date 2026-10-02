@@ -40,6 +40,7 @@ export function buildHeadlessMobileSessionTerminalTabs(
             ...(tab.startupCwd ? { startupCwd: tab.startupCwd } : {}),
             ...(tab.launchAgent ? { launchAgent: tab.launchAgent } : {}),
             ...(layout ? { parentLayout: cloneTerminalLayoutSnapshot(layout) } : {}),
+            ...(tab.manualWorkPhase !== undefined ? { manualWorkPhase: tab.manualWorkPhase } : {}),
             ...(tab.color != null ? { color: tab.color } : {}),
             ...(tab.isPinned ? { isPinned: true } : {}),
             ...(tab.viewMode ? { viewMode: tab.viewMode } : {}),

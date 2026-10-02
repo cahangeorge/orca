@@ -178,6 +178,10 @@ export function buildMirroredTerminalTabs(
         ...(quickCommandLabel ? { quickCommandLabel } : {}),
         ...(startupCwd ? { startupCwd } : {}),
         customTitle: existing?.customTitle ?? null,
+        manualWorkPhase:
+          existing?.manualWorkPhase !== undefined
+            ? existing.manualWorkPhase
+            : surfaces.find((surface) => surface.manualWorkPhase !== undefined)?.manualWorkPhase,
         color,
         isPinned,
         ...(viewMode ? { viewMode } : {}),

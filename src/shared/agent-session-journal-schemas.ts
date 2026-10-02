@@ -220,7 +220,12 @@ export const AgentJournalItemBodySchema = z.discriminatedUnion('kind', [
     state: z.string().min(1),
     output: BoundedPayload.optional()
   }),
-  z.object({ kind: z.literal('diff'), path: z.string(), patch: BoundedPayload }),
+  z.object({
+    kind: z.literal('diff'),
+    path: z.string(),
+    patch: BoundedPayload,
+    editConfirmed: z.boolean().optional()
+  }),
   z.object({
     kind: z.literal('approval'),
     title: z.string(),

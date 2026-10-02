@@ -233,6 +233,7 @@ export function renderTabBarItems({
         worktreeId,
         title: item.data.label,
         customTitle: item.data.customLabel,
+        manualWorkPhase: item.data.manualWorkPhase,
         color: item.data.color,
         sortOrder: item.data.sortOrder,
         createdAt: item.data.createdAt,
@@ -244,6 +245,7 @@ export function renderTabBarItems({
         <SortableTab
           key={item.id}
           tab={structuredTab}
+          conversationSessionId={item.data.entityId}
           unifiedTabId={item.unifiedTabId}
           groupId={resolvedGroupId}
           tabCount={items.length}

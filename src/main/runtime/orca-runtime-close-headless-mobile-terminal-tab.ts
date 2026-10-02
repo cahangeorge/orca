@@ -1,4 +1,5 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
+import type { ConversationWorkPhase } from '../../shared/conversation-work-phase'
 import { OrcaRuntimeWithCloseStructuredAgentSessionTab } from './orca-runtime-close-structured-agent-session-tab'
 import type {
   RuntimeMobileSessionTabMove,
@@ -224,6 +225,7 @@ export class OrcaRuntimeWithCloseHeadlessMobileTerminalTab extends OrcaRuntimeWi
     worktreeSelector: string,
     args: {
       tabId: string
+      manualWorkPhase?: ConversationWorkPhase | null
       color?: string | null
       isPinned?: boolean
       viewMode?: 'terminal' | 'chat'

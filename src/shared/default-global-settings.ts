@@ -221,6 +221,8 @@ export function buildDefaultSettings(args: {
     agentYoloDefaultsMigrated: true,
     agentStatusHooksEnabled: true,
     codexTerminalServerIsolation: true,
+    tabAutoPhaseBackground: true,
+    tabAgentStatusIcon: true,
     tabAutoGenerateTitle: false,
     confirmClosePinnedTab: true,
     editorPreviewTabsEnabled: true,

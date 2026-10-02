@@ -1,3 +1,4 @@
+import type { ConversationWorkPhase } from '../../../../../shared/conversation-work-phase'
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../../types'
 import type {
@@ -102,6 +103,7 @@ export type TabsSlice = {
     label: string | null,
     opts?: { recordInteraction?: boolean }
   ) => void
+  setTabManualWorkPhase: (tabId: string, phase: ConversationWorkPhase | null) => void
   setUnifiedTabColor: (tabId: string, color: string | null) => void
   pinTab: (tabId: string) => void
   unpinTab: (tabId: string) => void

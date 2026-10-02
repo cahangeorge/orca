@@ -1,3 +1,4 @@
+import type { ConversationWorkPhase } from './conversation-work-phase'
 import type { AiVaultSessionTitle } from './ai-vault-session-title'
 import type { AgentType } from './agent-status-types'
 import type { ExecutionHostId } from './execution-host'
@@ -63,6 +64,7 @@ export type Tab = {
   aiVaultTitle?: AiVaultSessionTitle | null
   quickCommandLabel?: string | null
   customLabel: string | null
+  manualWorkPhase?: ConversationWorkPhase | null
   color: string | null
   sortOrder: number
   createdAt: number

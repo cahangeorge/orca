@@ -88,6 +88,10 @@ export function useTabGroupItemProjections({
             generatedTitle: terminalTab?.generatedTitle ?? item.generatedLabel ?? null,
             customTitle: item.customLabel ?? terminalTab?.customTitle ?? null,
             color: item.color ?? terminalTab?.color ?? null,
+            manualWorkPhase:
+              item.manualWorkPhase !== undefined
+                ? item.manualWorkPhase
+                : terminalTab?.manualWorkPhase,
             sortOrder: item.sortOrder,
             createdAt: item.createdAt,
             generation: terminalTab?.generation,

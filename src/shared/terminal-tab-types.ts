@@ -1,3 +1,4 @@
+import type { ConversationWorkPhase } from './conversation-work-phase'
 import type { AiVaultSessionTitle } from './ai-vault-session-title'
 import type { TuiAgent } from './tui-agent'
 
@@ -70,6 +71,7 @@ export type TerminalTab = {
   /** Stable label from the tab-bar Quick Command that created this terminal. */
   quickCommandLabel?: string | null
   customTitle: string | null
+  manualWorkPhase?: ConversationWorkPhase | null
   color: string | null
   /** Pinned tabs survive "close others"; host-persisted for remote servers. */
   isPinned?: boolean
