@@ -146,9 +146,9 @@ function RefusalBlocks(props: {
   // A batch indents each skill's lines under its state; one skill's lines sit flush.
   const indent = props.blocks.length > 1 ? 'pl-3' : undefined
   return (
-    <div className={cn('flex min-w-0 flex-1 flex-col gap-1 text-xs leading-snug', props.className)}>
+    <div className={cn('flex min-w-0 flex-1 flex-col gap-2 text-xs leading-snug', props.className)}>
       {visible.map((block) => (
-        <div key={block.headline} className="flex min-w-0 flex-col">
+        <div key={block.headline} className="flex min-w-0 flex-col gap-1.5">
           <p>{block.headline}</p>
           {block.paths.map(({ path, next }) => (
             <div key={path} className={cn('flex min-w-0 flex-col', indent)}>

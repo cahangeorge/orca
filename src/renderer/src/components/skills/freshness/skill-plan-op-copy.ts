@@ -28,8 +28,8 @@ export function updatedSkillsLabel(
   const { changedCount, leftAloneCount } = summary
   if (savedOldCopy && changedCount === 0 && leftAloneCount === 0) {
     return t(
-      'auto.components.skills.SkillFreshnessUpdateDialog.upToDateOldCopySaved',
-      'Up to date · Old copy saved separately'
+      'auto.components.skills.SkillFreshnessUpdateDialog.upToDateEditsSaved',
+      'Up to date · Edits saved separately'
     )
   }
   const updated = t(

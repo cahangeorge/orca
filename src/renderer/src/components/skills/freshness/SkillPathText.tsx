@@ -60,6 +60,7 @@ export function SkillRetainedPathLine({
   className?: string
 }): React.JSX.Element {
   const t = useTranslate()
+  const copyLabel = t('auto.components.skills.SkillRow.copyPath', 'Copy path')
   const copyPath = async (): Promise<void> => {
     try {
       await window.api.ui.writeClipboardText(path)
@@ -71,15 +72,17 @@ export function SkillRetainedPathLine({
   return (
     <div className={cn('flex min-w-0 items-start gap-1.5', className)}>
       <SkillPathText path={path} homeDirectory={homeDirectory} className="flex-1" />
+      {/* Icon-only so the path keeps the column; always visible so Tab reaches it. */}
       <Button
         type="button"
         variant="ghost"
-        size="xs"
+        size="icon-xs"
         className="shrink-0"
+        aria-label={copyLabel}
+        title={copyLabel}
         onClick={() => void copyPath()}
       >
-        <Copy className="size-3" />
-        {t('auto.components.skills.SkillRow.copyPath', 'Copy path')}
+        <Copy />
       </Button>
     </div>
   )
