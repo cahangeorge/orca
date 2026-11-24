@@ -65,8 +65,8 @@ export function useAutomationsPageRefresh({
     automationHostTargetKey,
     setRelativeNow,
     runHistoryReloadToken,
-    awaitingHistorySelection,
-    setAwaitingHistorySelection
+    blockedRunHistory,
+    setBlockedRunHistory
   } = local
   const { scopedExternal, selectedRow, boundRun } = list
   const { automationHostTargetFor } = destination
@@ -181,8 +181,11 @@ export function useAutomationsPageRefresh({
       if (
         useAppStore.getState().pendingAutomationRunNavigation === pendingAutomationRunNavigation
       ) {
-        if (pendingAutomationRunNavigation.ownerKey && !awaitingHistorySelection) {
-          setAwaitingHistorySelection(true)
+        if (
+          pendingAutomationRunNavigation.ownerKey &&
+          blockedRunHistory !== pendingAutomationRunNavigation
+        ) {
+          setBlockedRunHistory(pendingAutomationRunNavigation)
           return
         }
         dropUnreachablePendingNavigation(pendingAutomationRunNavigation)
@@ -201,15 +204,23 @@ export function useAutomationsPageRefresh({
     return () => window.clearTimeout(timer)
   }, [
     automationHostTargetKey,
-    awaitingHistorySelection,
+    blockedRunHistory,
     isLoading,
     pendingAutomationRunNavigation,
     pendingTargetKey,
     pendingListingFailures,
     refresh,
-    setAwaitingHistorySelection,
+    setBlockedRunHistory,
     setPageView
   ])
+  // A failed visit only blocks its own row. An unscoped fallback cannot distinguish colliding rows.
+  const historyBlocked =
+    blockedRunHistory !== null &&
+    selectedRow !== null &&
+    selectedRow.automation.id === blockedRunHistory.automationId &&
+    (!selectedRow.catalogRef ||
+      !blockedRunHistory.rowKey ||
+      selectedRow.key === blockedRunHistory.rowKey)
   useSelectedAutomationRunHistory({
     selected: selectedRow,
     selection: { automationId: store.selectedId, rowKey: local.selectedRowKey },
@@ -221,7 +232,7 @@ export function useAutomationsPageRefresh({
       (boundRun !== null && selectedRow === null) ||
       (pendingAutomationRunNavigation?.ownerKey
         ? isLoading || automationHostTargetKey !== pendingTargetKey
-        : awaitingHistorySelection && !pendingAutomationRunNavigation),
+        : historyBlocked && !pendingAutomationRunNavigation),
     reloadToken: runHistoryReloadToken,
     acquisitionToken: local.runHistoryAcquisitionToken,
     onSettled: local.setSelectedAutomationRuns

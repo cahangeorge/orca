@@ -7,10 +7,8 @@ import {
 } from '../hosts/automation-host-client'
 import { ALL_AUTOMATION_HOSTS_FILTER } from '../../../../../shared/automations/ownership/automation-host-filter'
 import { canRerunAutomationRun } from './automation-run-view-state'
-import {
-  reportReplacedAutomationRunOwner,
-  resolveAutomationRunLinkRow
-} from './automation-run-link-row'
+import { resolveAutomationRunLinkRow } from './automation-run-link-row'
+import { useAutomationRunOwnerReplacement } from './use-automation-run-owner-replacement'
 import { useAutomationRunWorkspaceDetails } from './use-automation-run-workspace-details'
 import type { AutomationsPageListState } from '../listing/use-automations-page-list-state'
 import type { AutomationsPageLocalState } from '../use-automations-page-local-state'
@@ -46,11 +44,13 @@ export function useAutomationRunPageState({
     | 'setPageView'
     | 'setRunPageOrigin'
     | 'setRunNotFound'
+    | 'runNotFound'
+    | 'runVisit'
     | 'setRunVisit'
     | 'isDetailOpen'
     | 'setIsDetailOpen'
-    | 'awaitingHistorySelection'
-    | 'setAwaitingHistorySelection'
+    | 'blockedRunHistory'
+    | 'setBlockedRunHistory'
   >
   list: AutomationsPageListState
   setup: Pick<
@@ -82,8 +82,8 @@ export function useAutomationRunPageState({
     setRunVisit,
     isDetailOpen,
     setIsDetailOpen,
-    awaitingHistorySelection,
-    setAwaitingHistorySelection
+    blockedRunHistory,
+    setBlockedRunHistory
   } = local
   const {
     selected,
@@ -95,6 +95,8 @@ export function useAutomationRunPageState({
     scopedExternal
   } = list
   const { selectedRuns, selectedRunsReady, selectedRunsNotice, selectedAutomationRunPage } = setup
+  const capturedOwners = hostCatalog.rows.capturedOwners
+  const leaveReplacedRun = useAutomationRunOwnerReplacement(local, capturedOwners)
 
   useEffect(() => {
     if (
@@ -164,8 +166,8 @@ export function useAutomationRunPageState({
     }
     if (!pendingAutomation) {
       // The newer addressed list can disagree with a cached scoped row.
-      if (pending.ownerKey && !awaitingHistorySelection) {
-        setAwaitingHistorySelection(true)
+      if (pending.ownerKey && blockedRunHistory !== pending) {
+        setBlockedRunHistory(pending)
         return
       }
       if (!pending.ownerKey) {
@@ -180,20 +182,18 @@ export function useAutomationRunPageState({
     const { row: pendingRow, ownerReplaced } = resolveAutomationRunLinkRow(
       pending,
       visibleRows,
-      hostCatalog.rows.capturedOwners,
+      capturedOwners,
       pendingTargetKey
     )
     if (!pendingRow) {
       if (ownerReplaced) {
         // Keep the link live until history acquisition has observed this block.
-        if (!awaitingHistorySelection) {
-          setAwaitingHistorySelection(true)
+        if (blockedRunHistory !== pending) {
+          setBlockedRunHistory(pending)
           return
         }
         setPendingAutomationRunNavigation(null)
-        setSelectedAutomationRunPageId(null)
-        setPageView('automations')
-        reportReplacedAutomationRunOwner(t)
+        leaveReplacedRun()
         return
       }
       if (hostCatalog.resolution.effective.kind !== 'all') {
@@ -213,7 +213,7 @@ export function useAutomationRunPageState({
       return
     }
     if (pending.ownerKey) {
-      setAwaitingHistorySelection(false)
+      setBlockedRunHistory(null)
     }
     if (!pending.runId) {
       if (pending.ownerKey) {
@@ -258,8 +258,10 @@ export function useAutomationRunPageState({
   }, [
     automations,
     automationHostTargetKey,
-    awaitingHistorySelection,
+    blockedRunHistory,
+    capturedOwners,
     isLoading,
+    leaveReplacedRun,
     hostCatalog,
     selectAutomationRow,
     visibleRows,
@@ -274,7 +276,7 @@ export function useAutomationRunPageState({
     selectedRunsReady,
     selectedRunsNotice,
     setActivePaneTab,
-    setAwaitingHistorySelection,
+    setBlockedRunHistory,
     setIsDetailOpen,
     setPendingAutomationRunNavigation,
     setPageView,
@@ -282,8 +284,7 @@ export function useAutomationRunPageState({
     setRunNotFound,
     setRunVisit,
     setSelectedAutomationRunPageId,
-    setSelectedId,
-    t
+    setSelectedId
   ])
 
   const { name, actionLabel } = useAutomationRunWorkspaceDetails(

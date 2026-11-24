@@ -60,7 +60,7 @@ export function useAutomationsPageListState({
     | 'setSelectedAutomationRunPageId'
     | 'setSelectedRowKey'
     | 'setRunHistoryAcquisitionToken'
-    | 'setAwaitingHistorySelection'
+    | 'setBlockedRunHistory'
     | 'runVisit'
     | 'leaveBoundAutomationRun'
   >
@@ -81,7 +81,7 @@ export function useAutomationsPageListState({
     setSelectedAutomationRunPageId,
     setSelectedRowKey,
     setRunHistoryAcquisitionToken,
-    setAwaitingHistorySelection,
+    setBlockedRunHistory,
     runVisit,
     leaveBoundAutomationRun
   } = local
@@ -113,7 +113,7 @@ export function useAutomationsPageListState({
       const row = rowKey === null ? null : visibleRows.find((candidate) => candidate.key === rowKey)
       if (!automatic) {
         leaveBoundAutomationRun()
-        setAwaitingHistorySelection(false)
+        setBlockedRunHistory(null)
       }
       setRunHistoryAcquisitionToken((token) => token + 1)
       setSelectedAutomationRunPageId(null)
@@ -126,7 +126,7 @@ export function useAutomationsPageListState({
       setSelectedId,
       setSelectedRowKey,
       setRunHistoryAcquisitionToken,
-      setAwaitingHistorySelection,
+      setBlockedRunHistory,
       visibleRows
     ]
   )

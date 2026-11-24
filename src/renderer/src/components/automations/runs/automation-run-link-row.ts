@@ -35,15 +35,22 @@ export function resolveAutomationRunLinkRow(
         getAutomationHostTargetKey(getAutomationAuthorityTarget(candidate.catalogRef.authority)) ===
           authorityTargetKey)
   )
-  const replacement = pending.rowKey ? owners.get(pending.rowKey) : undefined
   return {
     row,
-    ownerReplaced:
-      !row &&
-      pending.ownerKey &&
-      replacement?.owner &&
-      capturedAutomationOwnerKey(replacement) !== pending.ownerKey
+    ownerReplaced: !row && automationRunLinkOwnerChanged(pending, owners)
   }
+}
+
+export function automationRunLinkOwnerChanged(
+  target: Pick<PendingAutomationRunNavigation, 'ownerKey' | 'rowKey'>,
+  owners: ReadonlyMap<string, AutomationCapturedOwner>
+): boolean {
+  const replacement = target.rowKey ? owners.get(target.rowKey) : undefined
+  return Boolean(
+    target.ownerKey &&
+    replacement?.owner &&
+    capturedAutomationOwnerKey(replacement) !== target.ownerKey
+  )
 }
 
 export function matchesAutomationRunLinkRow(
