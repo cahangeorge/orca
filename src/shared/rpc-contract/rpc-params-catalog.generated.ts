@@ -137,6 +137,7 @@ import {
   SetValue,
   TypeText
 } from './computer-schemas-params'
+import { DecisionShadowConfigureParams, DecisionShadowReadParams } from './decision-shadow-params'
 import {
   AttachParams as AttachParamsOfEmulatorParams,
   AxParams,
@@ -572,6 +573,8 @@ export const RPC_PARAMS_BY_METHOD = {
   'agentSession.conversationOutline': OptionsParams,
   'agentSession.create': CreateParams,
   'agentSession.createSupport': CreateSupportParams,
+  'agentSession.decisionShadowConfigure': DecisionShadowConfigureParams,
+  'agentSession.decisionShadowRead': DecisionShadowReadParams,
   'agentSession.ensure': AttachParams,
   'agentSession.handoffStatus': HandoffStatusParams,
   'agentSession.history': HistoryParams,

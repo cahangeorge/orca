@@ -117,7 +117,7 @@ export function readAgentSessionHydrationPage(
   return buildHydrationPage(journal.snapshot(), fence)
 }
 
-function buildHydrationPage(
+export function buildHydrationPage(
   snapshot: AgentJournalSnapshot,
   fence?: number
 ): AgentSessionHistoryPage {

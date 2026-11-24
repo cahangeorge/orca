@@ -1,3 +1,8 @@
+import {
+  hasCurrentCodexModelCatalogProbeContext,
+  revokeCodexModelCatalogProbeContext,
+  transferCodexModelCatalogProbeContext
+} from '../../codex/codex-model-catalog-probe-context'
 import type {
   AgentSessionFastModeSupport,
   AgentSessionModelOption
@@ -80,6 +85,9 @@ function listingKey(entry: AgentModelCatalogEntry): string {
 
 export class AgentModelCatalogStore {
   private readonly entries = new Map<string, AgentModelCatalogEntry>()
+  /** Launch evidence is process-local: disk hydration and failed refreshes
+   * cannot authorize a new pre-dispatch selection, even after failure TTL. */
+  private readonly launchEvidence = new WeakSet<AgentModelCatalogEntry>()
   private readonly failures = new Map<string, CatalogFailure>()
   private readonly refreshes = new Map<string, Promise<AgentModelCatalogEntry | null>>()
   private persistence: AgentModelCatalogPersistence | null = null
@@ -115,6 +123,23 @@ export class AgentModelCatalogStore {
     return entry
   }
 
+  hasCurrentProcessLaunchEvidence(entry: AgentModelCatalogEntry): boolean {
+    return this.entries.get(entry.fingerprint) === entry && this.launchEvidence.has(entry)
+  }
+
+  hasCurrentProbeContextEvidence(entry: AgentModelCatalogEntry, accountHomePath: string): boolean {
+    if (!this.hasCurrentProcessLaunchEvidence(entry) || this.hasActiveFailure(entry.fingerprint)) {
+      return false
+    }
+    const current = hasCurrentCodexModelCatalogProbeContext(entry, accountHomePath)
+    // A trusted callback may synchronously replace the entry or record failure.
+    return (
+      current &&
+      this.hasCurrentProcessLaunchEvidence(entry) &&
+      !this.hasActiveFailure(entry.fingerprint)
+    )
+  }
+
   isStale(entry: AgentModelCatalogEntry): boolean {
     return this.now() - entry.fetchedAt >= AGENT_MODEL_CATALOG_FRESH_MS
   }
@@ -148,6 +173,11 @@ export class AgentModelCatalogStore {
     success: AgentModelCatalogSuccess
   ): AgentModelCatalogEntry | null {
     if (success.models.length === 0) {
+      const previous = this.entries.get(fingerprint)
+      if (previous) {
+        this.launchEvidence.delete(previous)
+        revokeCodexModelCatalogProbeContext(previous)
+      }
       // An empty list identifies no model; it is doubt, not a catalog.
       return null
     }
@@ -163,6 +193,10 @@ export class AgentModelCatalogStore {
     }
     this.entries.delete(fingerprint)
     this.entries.set(fingerprint, entry)
+    this.launchEvidence.add(entry)
+    if (agent === 'codex' && success.origin === 'probe') {
+      transferCodexModelCatalogProbeContext(success, entry)
+    }
     this.failures.delete(fingerprint)
     this.evictOverCap()
     // Live sessions re-list every turn; an unchanged listing only refreshes the in-memory age.
@@ -173,6 +207,11 @@ export class AgentModelCatalogStore {
   }
 
   recordFailure(fingerprint: string, detail: string): void {
+    const entry = this.entries.get(fingerprint)
+    if (entry) {
+      this.launchEvidence.delete(entry)
+      revokeCodexModelCatalogProbeContext(entry)
+    }
     this.failures.set(fingerprint, { detail, failedAt: this.now() })
   }
 

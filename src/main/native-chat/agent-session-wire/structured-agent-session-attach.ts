@@ -43,6 +43,7 @@ import type { AgentSessionJournal } from '../agent-session-journal/journal-store
 import { reconcileJournalSubmissionsAgainstHistory } from '../agent-session-journal/journal-restart-reconciliation'
 import type { ProviderHistoryWindow } from '../agent-session-journal/journal-submission-reconciler'
 import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
+import type { StructuredAgentSessionInitialOptions } from '../../../shared/structured-agent-session-create'
 import { structuredAgentSessionRefusalMessage } from './structured-agent-session-refusal-message'
 
 /**
@@ -61,6 +62,8 @@ export type AgentSessionAttachParams = {
   runtimeKind: 'native'
   /** Host-resolved defaults for a create-by-intent; remote attach schemas do not accept them. */
   options?: Readonly<Record<string, string>>
+  /** Host-validated explicit create intent; never accepted by the external attach schema. */
+  createInitialSelection?: StructuredAgentSessionInitialOptions
   /** The tab id a create reserves for this chat, taken when its tab is published. Never on the
    *  attach fingerprint: which tab shows the chat is not which conversation it attaches to. */
   surfaceTabId?: string
@@ -97,7 +100,8 @@ export type AgentSessionAttachAuthority = {
  *  and its retry, and a retry must replay rather than conflict. `options` is
  *  excluded for the same reason — it is the session's initial state, not its
  *  identity, and the host re-resolves it from settings the user may have changed
- *  between an unknown-outcome attempt and its retry. */
+ *  between an unknown-outcome attempt and its retry. An explicit create selection is an
+ *  immutable intent instead, and must conflict when retried with another pair. */
 export function attachFingerprintFields(params: AgentSessionAttachParams): Record<string, unknown> {
   return {
     location: params.location,
@@ -110,6 +114,7 @@ export function attachFingerprintFields(params: AgentSessionAttachParams): Recor
     // identity. The transcript path is excluded: it is where the host found that conversation this
     // time, not part of what the caller asked for.
     adoptedProviderHandle: params.adopt?.providerHandle,
+    createInitialSelection: params.createInitialSelection,
     expectedRuntimeFence: params.envelope.expectedRuntimeFence
   }
 }
@@ -119,6 +124,25 @@ export function attachFingerprintFields(params: AgentSessionAttachParams): Recor
 export function admitAttachOrRefuse(
   params: AgentSessionAttachParams
 ): { ok: true; fingerprint: string } | { ok: false; refusal: AgentSessionWireRefusal } {
+  const selection = params.createInitialSelection
+  if (
+    selection !== undefined &&
+    (params.agent !== 'codex' ||
+      params.provider !== 'codex' ||
+      params.adopt !== undefined ||
+      params.envelope.expectedRuntimeFence !== null ||
+      params.options?.model !== selection.model ||
+      params.options?.effort !== selection.effort)
+  ) {
+    return {
+      ok: false,
+      refusal: refuse(
+        'agent_session_operation_invalid',
+        { reason: 'requestMalformed' },
+        'Initial selection must match a new Codex reservation.'
+      )
+    }
+  }
   if (params.providerHandle && params.providerHandle.kind !== params.provider) {
     return {
       ok: false,

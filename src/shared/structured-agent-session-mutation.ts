@@ -1,4 +1,5 @@
 import { sha256 } from './sha256'
+import type { StructuredAgentSessionInitialOptions } from './structured-agent-session-create'
 
 function canonicalize(value: unknown): string {
   if (value === null || typeof value !== 'object') {
@@ -7,7 +8,7 @@ function canonicalize(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map(canonicalize).join(',')}]`
   }
-  const entries = Object.entries(value as Record<string, unknown>)
+  const entries = Object.entries(value)
     .filter(([, entry]) => entry !== undefined)
     .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
   return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalize(entry)}`).join(',')}}`
@@ -44,6 +45,8 @@ export function structuredAgentSessionCreateFingerprint(input: {
   agent: 'claude' | 'codex'
   resumeFrom?: { providerSessionId: string }
   tabId?: string
+  initialOptions?: StructuredAgentSessionInitialOptions
+  initialOptionsCatalogRef?: string
 }): string {
   return structuredAgentSessionPayloadFingerprint({
     method: 'agentSession.create',
@@ -56,7 +59,9 @@ export function structuredAgentSessionCreateFingerprint(input: {
       resumeFrom: input.resumeFrom,
       // The host digests the same field; a retry naming another tab still replays with the
       // recorded one, since the host owns the id.
-      tabId: input.tabId
+      tabId: input.tabId,
+      initialOptions: input.initialOptions,
+      initialOptionsCatalogRef: input.initialOptionsCatalogRef
     }
   })
 }

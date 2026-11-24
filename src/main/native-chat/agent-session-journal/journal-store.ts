@@ -1,3 +1,4 @@
+import { readOwnedRetainedJournal } from './journal-owned-retained-read'
 // Append-only journal store for one agent session.
 
 import type { AgentJournalDispatchRejection } from '../../../shared/agent-session-failure-words'
@@ -200,6 +201,16 @@ export class AgentSessionJournal {
   })
 
   snapshot = (): AgentJournalSnapshot => renderJournalState(this.state)
+
+  /** Reads committed SQLite horizon on the owned handle, never opens an absent journal. */
+  readRetainedSnapshot = (identity: AgentSessionJournalIdentity, fence: number) =>
+    readOwnedRetainedJournal(
+      this.queue,
+      () => (this.readOnly || this.closer.isReleased ? null : this.requireDatabase().db),
+      this.identity,
+      identity,
+      fence
+    )
 
   /** Visits reduced items without allocating and sorting a full snapshot. */
   visitItems = (

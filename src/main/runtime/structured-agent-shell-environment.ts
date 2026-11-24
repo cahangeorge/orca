@@ -1,5 +1,6 @@
 import { resolveLoginShellEnvironment } from '../startup/login-shell-environment'
 import {
+  isNativeChatShellEnvironmentName,
   nativeChatShellEnvironmentPolicy,
   type NativeChatShellEnvironmentPolicy
 } from '../../shared/native-chat-shell-environment'
@@ -78,6 +79,7 @@ export type StructuredAgentEnvironmentSources = {
   resolveShellEnvironmentPolicy?: () => NativeChatShellEnvironmentPolicy
   resolveLaunchEnv?: () => Promise<NodeJS.ProcessEnv>
   resolveLaunchEnvOverlay?: () => Promise<Record<string, string>> | Record<string, string>
+  readLaunchEnvOverlay?: () => unknown
   resolveCodexOverrides?: () => NodeJS.ProcessEnv
 }
 
@@ -91,8 +93,17 @@ export function createStructuredAgentEnvironmentResolvers(
 ): {
   resolveCodexEnvironment: () => Promise<NodeJS.ProcessEnv>
   resolveClaudeInheritedEnv: () => Promise<Record<string, string>>
+  readCurrentCodexEnvironment: () => NodeJS.ProcessEnv | null
 } {
-  const shellEnvironment = (sources.resolveEnvironment ?? resolveLoginShellEnvironment)()
+  let completedShellEnvironment: NodeJS.ProcessEnv | null = null
+  const shellEnvironment = (sources.resolveEnvironment ?? resolveLoginShellEnvironment)().then(
+    (environment) => {
+      completedShellEnvironment = Object.freeze({ ...environment })
+      return completedShellEnvironment
+    }
+  )
+  // Async acquisitions still see rejection; synchronous readers never retry the source.
+  void shellEnvironment.catch(() => {})
   const resolveBase = async (): Promise<Record<string, string>> =>
     structuredAgentBaseEnvironment({
       shellEnv: await shellEnvironment,
@@ -105,6 +116,76 @@ export function createStructuredAgentEnvironmentResolvers(
       ...(await sources.resolveLaunchEnvOverlay?.()),
       ...sources.resolveCodexOverrides?.()
     }),
-    resolveClaudeInheritedEnv: resolveBase
+    resolveClaudeInheritedEnv: resolveBase,
+    readCurrentCodexEnvironment: () => {
+      if (!completedShellEnvironment || sources.resolveLaunchEnv) {
+        return null
+      }
+      if (sources.resolveLaunchEnvOverlay && !sources.readLaunchEnvOverlay) {
+        return null
+      }
+      try {
+        const policy = sources.resolveShellEnvironmentPolicy
+          ? readSynchronousPolicy(sources.resolveShellEnvironmentPolicy())
+          : nativeChatShellEnvironmentPolicy(null)
+        if (!policy) {
+          return null
+        }
+        const base = structuredAgentBaseEnvironment({
+          shellEnv: completedShellEnvironment,
+          policy
+        })
+        const overlay = sources.readLaunchEnvOverlay
+          ? readSynchronousEnvironment(sources.readLaunchEnvOverlay())
+          : {}
+        const overrides = sources.resolveCodexOverrides
+          ? readSynchronousEnvironment(sources.resolveCodexOverrides())
+          : {}
+        return overlay && overrides ? { ...base, ...overlay, ...overrides } : null
+      } catch {
+        return null
+      }
+    }
   }
+}
+
+function readSynchronousEnvironment(value: unknown): NodeJS.ProcessEnv | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null
+  }
+  if ('then' in value) {
+    void Promise.resolve(value).catch(() => {})
+    return null
+  }
+  const environment: NodeJS.ProcessEnv = {}
+  for (const [key, entry] of Object.entries(value)) {
+    if (entry !== undefined && typeof entry !== 'string') {
+      return null
+    }
+    environment[key] = entry
+  }
+  return environment
+}
+
+function readSynchronousPolicy(value: unknown): NativeChatShellEnvironmentPolicy | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null
+  }
+  if ('then' in value) {
+    void Promise.resolve(value).catch(() => {})
+    return null
+  }
+  const inheritAll = 'inheritAll' in value ? value.inheritAll : undefined
+  const candidateNames = 'names' in value ? value.names : undefined
+  if (typeof inheritAll !== 'boolean' || !Array.isArray(candidateNames)) {
+    return null
+  }
+  const names: string[] = []
+  for (const name of candidateNames) {
+    if (typeof name !== 'string' || !isNativeChatShellEnvironmentName(name)) {
+      return null
+    }
+    names.push(name)
+  }
+  return { inheritAll, names }
 }

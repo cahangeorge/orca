@@ -1,3 +1,4 @@
+import type { StructuredAgentSessionSelectedCreateAdmission } from './structured-agent-session-host-types'
 import { refuse } from '../../../shared/agent-session-wire-refusals'
 import { settlePostAcquisitionAttachFailure } from './structured-agent-session-attach-failure'
 import {
@@ -54,6 +55,7 @@ export type AttachFlowInput = {
   params: AgentSessionAttachParams
   now: () => number
   recordPhase?: AgentSessionCreatePhaseRecorder
+  selectedCreateAdmission?: StructuredAgentSessionSelectedCreateAdmission
   /** Publishes the journal before clients can send against the new owner. `acquiredOwner` is
    *  true only when this attach spawned the provider child, so a re-attach to a live one is not
    *  mistaken for a cold acquire. */
@@ -91,6 +93,16 @@ export async function performAttach(
       'This execution host cannot create the requested structured agent session.'
     )
   })
+  if (params.createInitialSelection !== undefined && !input.selectedCreateAdmission) {
+    return {
+      ok: false,
+      refusal: refuse(
+        'agent_session_operation_unknown',
+        { reason: 'outcomeUnknown' },
+        'Selected creation admission is unavailable.'
+      )
+    }
+  }
   const sessionId = params.envelope.sessionId
   const admitted = admitAttachOrRefuse(params)
   if (!admitted.ok) {
@@ -125,7 +137,8 @@ export async function performAttach(
           callerKey: input.callerKey,
           fingerprint: admitted.fingerprint,
           now: input.now()
-        })
+        }),
+        input.selectedCreateAdmission?.reservation
       )
     )
     record = reserved.record

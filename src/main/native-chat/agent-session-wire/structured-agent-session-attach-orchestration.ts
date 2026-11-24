@@ -1,3 +1,4 @@
+import { refuse } from '../../../shared/agent-session-wire-refusals'
 import { agentSessionFailureFact } from '../../../shared/agent-session-failure'
 import { recoverStructuredRewind } from './structured-rewind-recovery'
 import { recoverInterruptedCompaction } from './structured-compaction-recovery'
@@ -34,8 +35,9 @@ import {
   indexProviderChild,
   structuredAgentSessionConversationFence
 } from './structured-agent-session-provider-child'
-import type { DeferredStructuredAgentSessionEventSink } from './structured-agent-session-event-sink'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
+import { resolveStructuredAgentSessionSelectedCreateAdmission } from './structured-agent-session-host-types'
+import type { DeferredStructuredAgentSessionEventSink } from './structured-agent-session-event-sink'
 import {
   addAgentSessionCreatePhaseAttributes,
   withAgentSessionCreatePhase,
@@ -64,7 +66,9 @@ export function attachStructuredAgentSessionUnderSerialize(
   params: AgentSessionAttachParams,
   options: StructuredAgentSessionAttachOptions = {}
 ): Promise<AgentSessionMutationResult<AgentSessionAttachResult>> {
-  return context.tasks.trackAttach(runAttach(context, callerKey, params, options))
+  return context.tasks.trackAttach(
+    runAttach(context, callerKey, selectedAttachSnapshot(params), options)
+  )
 }
 
 export function attachStructuredAgentSession(
@@ -72,6 +76,7 @@ export function attachStructuredAgentSession(
   callerKey: string,
   params: AgentSessionAttachParams
 ): Promise<AgentSessionMutationResult<AgentSessionAttachResult>> {
+  params = selectedAttachSnapshot(params)
   const sessionId = params.envelope.sessionId
   // Tracked from enqueue, not from its turn on the queue: a quit drains a queued attach before it
   // evicts, so no child is spawned behind the eviction and orphaned.
@@ -102,24 +107,44 @@ async function runAttach(
   params: AgentSessionAttachParams,
   options: StructuredAgentSessionAttachOptions
 ): Promise<AgentSessionMutationResult<AgentSessionAttachResult>> {
+  const selectedCreateAdmission =
+    params.createInitialSelection === undefined
+      ? undefined
+      : resolveStructuredAgentSessionSelectedCreateAdmission(context.deps, callerKey, params)
+  if (selectedCreateAdmission === null) {
+    return refuseAgentSessionMutation(
+      refuse(
+        'agent_session_operation_unknown',
+        { reason: 'outcomeUnknown' },
+        'Selected creation admission is unavailable.'
+      )
+    )
+  }
   const sessionId = params.envelope.sessionId
   const recordPhase = options.recordPhase
   // Readers of a conversation already open are re-baselined when this attach moves its fence.
   const fenceBefore = context.sessions.has(sessionId)
     ? structuredAgentSessionConversationFence(context.deps.store, sessionId)
     : null
-  const unreconciled = await withAgentSessionCreatePhase('reconcile_leases', recordPhase, () =>
-    context.reconcileLeases(sessionId)
-  )
+  // First-only admission cannot repair or revive an existing owner before refusing it.
+  const unreconciled = selectedCreateAdmission
+    ? null
+    : await withAgentSessionCreatePhase('reconcile_leases', recordPhase, () =>
+        context.reconcileLeases(sessionId)
+      )
   if (unreconciled) {
     return refuseAgentSessionMutation(unreconciled)
   }
-  await withAgentSessionCreatePhase('resolve_recovery', recordPhase, () =>
-    context.runtimeState.resolveRecovery(sessionId)
-  )
-  const probe = await withAgentSessionCreatePhase('probe_owner', recordPhase, () =>
-    context.runtimeState.probeOwner(sessionId)
-  )
+  if (!selectedCreateAdmission) {
+    await withAgentSessionCreatePhase('resolve_recovery', recordPhase, () =>
+      context.runtimeState.resolveRecovery(sessionId)
+    )
+  }
+  const probe = selectedCreateAdmission
+    ? { outcome: 'reservation-unused' as const }
+    : await withAgentSessionCreatePhase('probe_owner', recordPhase, () =>
+        context.runtimeState.probeOwner(sessionId)
+      )
   // A child this attach spawns writes through a sink this attempt owns. Only a successful
   // attach makes the child and its sink the session's; any other exit closes the sink with
   // whatever the child queued, and leaves the conversation's child as it was.
@@ -157,6 +182,7 @@ async function runAttach(
       params,
       now: () => context.now(),
       recordPhase,
+      ...(selectedCreateAdmission ? { selectedCreateAdmission } : {}),
       ...(options.onAcquisitionFailed ? { onAcquisitionFailed: options.onAcquisitionFailed } : {}),
       openConversation: async (record) => {
         const conversation = await context.openConversation(record.sessionId, {
@@ -266,6 +292,23 @@ function endReleasedChild(
   context.runtimeState.currentEventSink(sessionId)?.close()
   context.runtimeState.discardEventSink(sessionId)
   context.publishStatus?.(sessionId)
+}
+
+function selectedAttachSnapshot(params: AgentSessionAttachParams): AgentSessionAttachParams {
+  if (params.createInitialSelection === undefined) {
+    return params
+  }
+  const snapshot = structuredClone(params)
+  const freeze = (value: object): void => {
+    for (const nested of Object.values(value)) {
+      if (nested !== null && typeof nested === 'object') {
+        freeze(nested)
+      }
+    }
+    Object.freeze(value)
+  }
+  freeze(snapshot)
+  return snapshot
 }
 
 /** Binds the sink to the journal and waits for the barrier the host publishes

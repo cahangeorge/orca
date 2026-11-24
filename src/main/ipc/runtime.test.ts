@@ -10,6 +10,8 @@ const { handleMock, onMock, removeAllListenersMock, removeHandlerMock, fromWebCo
   }))
 
 vi.mock('electron', () => ({
+  app: { on: vi.fn(), removeListener: vi.fn() },
+  webContents: { getAllWebContents: () => [] },
   BrowserWindow: {
     fromWebContents: fromWebContentsMock
   },
@@ -29,9 +31,12 @@ function runtimeCallEvent() {
   return {
     sender: {
       id: 1,
+      isDestroyed: () => false,
       mainFrame,
       on: vi.fn(),
-      once: vi.fn()
+      once: vi.fn(),
+      getURL: () => 'http://localhost:5173/',
+      isLoadingMainFrame: () => false
     },
     senderFrame: mainFrame
   }

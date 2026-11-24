@@ -2,7 +2,9 @@ import type { SubmissionRejectionFact } from '../../../shared/agent-session-fail
 import type { AgentSessionOwnerProbe } from '../../../shared/agent-session-lease-adjudication'
 import type { AgentJournalCursor } from '../../../shared/agent-session-journal-types'
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
+import { agentSessionRefusalError } from '../../../shared/agent-session-wire-refusals'
 import type { AgentSessionStatusSummary } from '../../../shared/agent-session-wire'
+import type { AgentSessionFirstReservationAdmission } from '../../runtime/agent-session-selected-first-reservation'
 import type { AgentSessionRecordStore } from '../../runtime/agent-session-record-store'
 import type { AgentSessionRecoveryCapsule } from '../../runtime/agent-session-recovery-capsule'
 import type { AgentSessionSpawnTokenScan } from '../../runtime/agent-session-spawn-token-process-scan'
@@ -90,7 +92,17 @@ export type StructuredAgentSessionHostSession = {
   lastEndedChild?: StructuredAgentSessionEndedChild
 }
 
+export type StructuredAgentSessionSelectedCreateAdmission = {
+  reservation: AgentSessionFirstReservationAdmission
+  beforeAcquire: (record: AgentSessionRecord) => undefined
+}
+
 export type StructuredAgentSessionHostDeps = {
+  /** Internal first-attempt grant; absent keeps explicit selected creation inactive. */
+  resolveSelectedCreateAdmission?: (
+    caller: StructuredAgentSessionCaller,
+    snapshot: Readonly<AgentSessionAttachParams>
+  ) => StructuredAgentSessionSelectedCreateAdmission | null
   store: AgentSessionRecordStore
   adapter: StructuredAgentSessionAdapter
   /** Optional advisory recovery storage, independent of conversation backups. */
@@ -130,4 +142,55 @@ export type StructuredAgentSessionHostDeps = {
   statusSink?: StructuredAgentSessionStatusSink
   /** Host model catalog surface; absent means every catalog read answers `unknown`. */
   modelCatalog?: AgentModelCatalogService
+}
+
+export function resolveStructuredAgentSessionSelectedCreateAdmission(
+  deps: StructuredAgentSessionHostDeps,
+  callerKey: string,
+  params: AgentSessionAttachParams
+): StructuredAgentSessionSelectedCreateAdmission | null {
+  try {
+    const grant = deps.resolveSelectedCreateAdmission?.(Object.freeze({ callerKey }), params)
+    if (
+      !grant ||
+      ('then' in grant && typeof grant.then === 'function') ||
+      typeof grant.reservation?.now !== 'function' ||
+      typeof grant.reservation.validate !== 'function' ||
+      typeof grant.beforeAcquire !== 'function'
+    ) {
+      void Promise.resolve(grant).catch(() => undefined)
+      return null
+    }
+    const validate = grant.reservation.validate
+    const beforeAcquire = grant.beforeAcquire
+    const now = grant.reservation.now
+    return {
+      reservation: {
+        now: () => requireSynchronousSelectedTime(now),
+        validate: (request) => requireSynchronousSelectedValidation(() => validate(request))
+      },
+      beforeAcquire: (record) => requireSynchronousSelectedValidation(() => beforeAcquire(record))
+    }
+  } catch {
+    return null
+  }
+}
+
+function requireSynchronousSelectedValidation(validate: () => unknown): undefined {
+  const result = validate()
+  if (result !== undefined) {
+    // Unsupported async checks must neither authorize effects nor leak rejected promises.
+    void Promise.resolve(result).catch(() => undefined)
+    throw agentSessionRefusalError('agent_session_operation_unknown', { reason: 'outcomeUnknown' })
+  }
+  return undefined
+}
+
+function requireSynchronousSelectedTime(now: () => unknown): number {
+  const result = now()
+  if (typeof result !== 'number') {
+    void Promise.resolve(result).catch(() => undefined)
+    throw agentSessionRefusalError('agent_session_operation_unknown', { reason: 'outcomeUnknown' })
+  }
+  return result
 }

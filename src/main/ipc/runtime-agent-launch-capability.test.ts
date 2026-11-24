@@ -27,6 +27,8 @@ const { handlers, advertised } = vi.hoisted(
 )
 
 vi.mock('electron', () => ({
+  app: { on: vi.fn(), removeListener: vi.fn() },
+  webContents: { getAllWebContents: () => [] },
   BrowserWindow: { fromWebContents: vi.fn() },
   ipcMain: {
     handle: vi.fn((channel: string, handler: (event: unknown, args?: unknown) => unknown) => {
@@ -63,7 +65,15 @@ const { supportsAgentLaunch } = await import('../runtime/rpc/methods/agent-launc
 function rendererEvent() {
   const mainFrame = {}
   return {
-    sender: { id: 1, mainFrame, on: vi.fn(), once: vi.fn(), isDestroyed: () => false },
+    sender: {
+      id: 1,
+      mainFrame,
+      on: vi.fn(),
+      once: vi.fn(),
+      isDestroyed: () => false,
+      getURL: () => 'http://localhost:5173/',
+      isLoadingMainFrame: () => false
+    },
     senderFrame: mainFrame
   }
 }

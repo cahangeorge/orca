@@ -138,6 +138,8 @@ export class OrcaRuntimeWithGetWorktreePs extends OrcaRuntimeWithStartTuiIdleVis
    * should never open the record store.
    */
   async ensureStructuredAgentSessionHost(): Promise<void> {
+    const resolveCodexLaunchEnvOverlay = (): Record<string, string> =>
+      resolveTuiAgentLaunchEnv('codex', this.requireStore().getSettings().agentDefaultEnv)
     await installStructuredAgentSessionHost({
       stateDirectory: getProfileUserDataPath(),
       hostId: LOCAL_EXECUTION_HOST_ID,
@@ -146,8 +148,8 @@ export class OrcaRuntimeWithGetWorktreePs extends OrcaRuntimeWithStartTuiIdleVis
       // in a plain folder lands in the folder rather than failing to resolve.
       resolveWorkspacePath: async (workspaceId) =>
         (await this.resolveRuntimeFileTarget(`id:${workspaceId}`)).worktree.path,
-      resolveLaunchEnvOverlay: () =>
-        resolveTuiAgentLaunchEnv('codex', this.requireStore().getSettings().agentDefaultEnv),
+      resolveLaunchEnvOverlay: resolveCodexLaunchEnvOverlay,
+      readLaunchEnvOverlay: resolveCodexLaunchEnvOverlay,
       resolveClaudeLaunchEnv: () =>
         resolveTuiAgentLaunchEnv('claude', this.requireStore().getSettings().agentDefaultEnv),
       resolveShellEnvironmentPolicy: () =>

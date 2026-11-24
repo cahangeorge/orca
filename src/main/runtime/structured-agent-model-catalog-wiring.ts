@@ -54,6 +54,7 @@ export async function modelCatalogHostDeps(input: {
     | 'resolveClaudeAuthPolicy'
   >
   envResolvers: {
+    readCurrentCodexEnvironment?: () => NodeJS.ProcessEnv | null
     resolveCodexEnvironment: NonNullable<CodexStructuredLaunchResolverDeps['resolveEnvironment']>
     resolveClaudeInheritedEnv: NonNullable<
       ClaudeStructuredLaunchResolverDeps['resolveInheritedEnv']
@@ -73,6 +74,7 @@ export async function modelCatalogHostDeps(input: {
     probes: {
       codex: createCodexModelCatalogProbe({
         resolveEnvironment: input.envResolvers.resolveCodexEnvironment,
+        readCurrentEnvironment: input.envResolvers.readCurrentCodexEnvironment ?? (() => null),
         ...(deps.resolveCodexCommand ? { resolveCommand: deps.resolveCodexCommand } : {})
       }),
       claude: createClaudeModelCatalogProbe({

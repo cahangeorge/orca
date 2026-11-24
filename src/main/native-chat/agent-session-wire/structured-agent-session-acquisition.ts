@@ -29,6 +29,7 @@ export async function acquireOwner(
   try {
     try {
       await input.onAcquiring?.()
+      input.selectedCreateAdmission?.beforeAcquire(record)
     } catch (error) {
       throw new AgentSessionPreSpawnError(error)
     }

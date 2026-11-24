@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, webContents } from 'electron'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import type {
   RuntimeBrowserDriverState,
@@ -24,9 +24,21 @@ function boundTerminalFitRestore(pending: Promise<boolean>): Promise<boolean> {
   return Promise.race([pending, deadline]).finally(() => clearTimeout(timer))
 }
 
+let senderCreatedListener:
+  | ((_event: Electron.Event, sender: Electron.WebContents) => void)
+  | undefined
+
 export function registerRuntimeHandlers(runtime: OrcaRuntimeService): void {
   const pendingTerminalFitRestores = new Map<string, Promise<boolean>>()
   const desktopSenders = new DesktopRuntimeSenderLifecycle(runtime)
+  if (senderCreatedListener) {
+    app.removeListener('web-contents-created', senderCreatedListener)
+  }
+  senderCreatedListener = (_event, sender) => desktopSenders.track(sender, true)
+  app.on('web-contents-created', senderCreatedListener)
+  for (const sender of webContents.getAllWebContents()) {
+    desktopSenders.track(sender)
+  }
   ipcMain.removeHandler('runtime:syncWindowGraph')
   ipcMain.removeHandler('runtime:getStatus')
   ipcMain.removeHandler('runtime:call')
@@ -68,21 +80,27 @@ export function registerRuntimeHandlers(runtime: OrcaRuntimeService): void {
       if (event.senderFrame !== event.sender.mainFrame) {
         throw new Error('Runtime RPC call must originate from the current main frame')
       }
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the dispatcher's RpcSuccess/RpcFailure union is the same envelope RuntimeRpcResponse describes; only the `result` generic differs, and this call site declares it as unknown.
-      return (await new RpcDispatcher({ runtime, methods: ALL_RPC_METHODS }).dispatch(
-        {
-          id: 'desktop-ipc',
-          authToken: 'desktop-ipc',
-          method: args.method,
-          params: args.params
-        },
-        {
-          clientId: 'desktop-renderer',
-          clientKind: 'runtime',
-          connectionId: desktopSenders.connectionIdFor(event.sender),
-          clientCapabilities: DESKTOP_RENDERER_RUNTIME_CLIENT_CAPABILITIES
-        }
-      )) as RuntimeRpcResponse<unknown>
+      const call = desktopSenders.beginUnaryCall(event.sender)
+      try {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the dispatcher's RpcSuccess/RpcFailure union is the same envelope RuntimeRpcResponse describes; only the `result` generic differs, and this call site declares it as unknown.
+        return (await new RpcDispatcher({ runtime, methods: ALL_RPC_METHODS }).dispatch(
+          {
+            id: 'desktop-ipc',
+            authToken: 'desktop-ipc',
+            method: args.method,
+            params: args.params
+          },
+          {
+            clientId: 'desktop-renderer',
+            clientKind: 'runtime',
+            connectionId: call.connectionId,
+            signal: call.signal,
+            clientCapabilities: DESKTOP_RENDERER_RUNTIME_CLIENT_CAPABILITIES
+          }
+        )) as RuntimeRpcResponse<unknown>
+      } finally {
+        call.release()
+      }
     }
   )
 

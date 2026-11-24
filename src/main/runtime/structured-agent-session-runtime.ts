@@ -1,3 +1,7 @@
+import {
+  installDecisionShadowRuntime,
+  type DecisionShadowRuntime
+} from '../decision-shadow/decision-shadow-runtime'
 // Where the structured agent-session wire becomes a live host on this runtime.
 //
 // Built on the first `agentSession.*` call rather than at startup: the record
@@ -84,6 +88,7 @@ export type StructuredAgentSessionRuntimeDeps = {
   resolveLaunchArgs?: (provider: AgentSessionRecord['provider']) => Promise<string[]> | string[]
   resolveLaunchEnv?: () => Promise<NodeJS.ProcessEnv>
   resolveLaunchEnvOverlay?: () => Promise<Record<string, string>> | Record<string, string>
+  readLaunchEnvOverlay?: () => unknown
   resolveClaudeLaunchEnv?: () => Promise<Record<string, string>> | Record<string, string>
   /** Required, and asserted at install time — an absent policy must not degrade to a guess. */
   resolveClaudeAuthPolicy: () => Promise<ClaudeStructuredAuthPolicy> | ClaudeStructuredAuthPolicy
@@ -198,6 +203,7 @@ async function install(deps: StructuredAgentSessionRuntimeDeps): Promise<Install
     hostId: deps.hostId
   })
   let host: StructuredAgentSessionHost | null = null
+  let decisionShadow: DecisionShadowRuntime | undefined
   const lifecycle = createStructuredAgentSessionLifecycleDelivery({
     handle: (event) => host?.handleAdapterEvent(event),
     ...(deps.onError ? { onError: deps.onError } : {}),
@@ -216,6 +222,12 @@ async function install(deps: StructuredAgentSessionRuntimeDeps): Promise<Install
     )
   }
   const codex = new CodexStructuredSessionAdapter({
+    decisionShadow: {
+      observe: (input) => decisionShadow?.hooks.observe(input),
+      update: (identity, clientMessageId, metadata) =>
+        decisionShadow?.hooks.update?.(identity, clientMessageId, metadata),
+      cancel: (identity, reason) => decisionShadow?.hooks.cancel(identity, reason)
+    },
     resolveLaunch: createCodexStructuredLaunchResolver({
       store,
       resolveWorkspacePath: deps.resolveWorkspacePath,
@@ -302,6 +314,7 @@ async function install(deps: StructuredAgentSessionRuntimeDeps): Promise<Install
     ...(deps.hasOpenDispatch ? { hasOpenDispatch: deps.hasOpenDispatch } : {}),
     ...(await modelCatalogHostDeps({ store, deps, envResolvers }))
   })
+  decisionShadow = installDecisionShadowRuntime(host)
   setStructuredAgentSessionHost(host)
   return {
     host,

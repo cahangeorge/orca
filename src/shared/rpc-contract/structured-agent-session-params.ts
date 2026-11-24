@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { hasValidStructuredAgentSessionCreateInitialSelection } from '../structured-agent-session-create'
 import { isAgentSessionSurfaceTabId } from '../agent-session-surface-tab-id'
 import { isAgentSessionId } from '../agent-session-record'
 import { normalizeExecutionHostId } from '../execution-host'
@@ -118,6 +119,11 @@ export const ResumeSource = z
   })
   .strict()
 
+export const InitialOptions = z.strictObject({
+  model: Identifier('Invalid initial model', MAX_OPTION_LABEL).regex(/^\S+$/u),
+  effort: Identifier('Invalid initial effort', MAX_OPTION_LABEL).regex(/^\S+$/u)
+})
+
 export const CreateIntentParams = z
   .object({
     envelope: MutationEnvelope,
@@ -132,9 +138,18 @@ export const CreateIntentParams = z
      * This object is strict, so an older host refuses a payload carrying it. A client sends it
      * only after `AGENT_SESSION_CREATE_TAB_ID_RUNTIME_CAPABILITY` is advertised.
      */
-    tabId: z.string().refine(isAgentSessionSurfaceTabId, 'Invalid chat tab ID').optional()
+    tabId: z.string().refine(isAgentSessionSurfaceTabId, 'Invalid chat tab ID').optional(),
+    // Availability and freshness are host checks; these tokens alone authorize no launch.
+    initialOptions: InitialOptions.optional(),
+    initialOptionsCatalogRef: Identifier('Invalid initial options catalog reference', 256)
+      .regex(/^\S+$/u)
+      .optional()
   })
   .strict()
+  .refine(
+    hasValidStructuredAgentSessionCreateInitialSelection,
+    'Initial selection requires a new Codex create, catalog reference and matching fingerprint'
+  )
 
 export const CreateParams = z.union([AttachParams, CreateIntentParams])
 

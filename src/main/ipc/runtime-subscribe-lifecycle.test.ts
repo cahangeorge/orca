@@ -18,6 +18,8 @@ const { dispatchMode, handlers, listeners, streams, unaryConnections } = vi.hois
 }))
 
 vi.mock('electron', () => ({
+  app: { on: vi.fn(), removeListener: vi.fn() },
+  webContents: { getAllWebContents: () => [] },
   BrowserWindow: { fromWebContents: vi.fn() },
   ipcMain: {
     handle: vi.fn((channel: string, handler: (_event: unknown, args?: unknown) => unknown) => {
@@ -76,6 +78,8 @@ type SenderHarness = {
     id: number
     isDestroyed: () => boolean
     mainFrame: object
+    getURL: () => string
+    isLoadingMainFrame: () => boolean
     on: (eventName: string, callback: () => void) => void
     once: (eventName: string, callback: () => void) => void
     send: ReturnType<typeof vi.fn>
@@ -108,6 +112,8 @@ function createSender(id: number): SenderHarness {
       id,
       isDestroyed: () => destroyed,
       mainFrame,
+      getURL: () => 'http://localhost:5173/',
+      isLoadingMainFrame: () => false,
       on: add,
       once: (eventName, callback) => {
         const wrapped = (): void => {

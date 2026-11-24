@@ -24,6 +24,7 @@ export type CodexStructuredSessionTeardownDeps = {
     sessionId: string,
     state: AgentSessionBackgroundTaskState | null
   ) => void
+  onClosingSession?: (sessionId: string) => void
   forgetNotificationRetries: (sessionId: string) => void
 }
 
@@ -31,6 +32,7 @@ export class CodexStructuredSessionTeardown {
   constructor(private readonly deps: CodexStructuredSessionTeardownDeps) {}
 
   close = async (sessionId: string): Promise<boolean> => {
+    this.deps.onClosingSession?.(sessionId)
     const closed = await closeCodexSession(
       sessionId,
       this.deps.sessions,
@@ -41,6 +43,7 @@ export class CodexStructuredSessionTeardown {
   }
 
   forceClose = async (sessionId: string): Promise<boolean> => {
+    this.deps.onClosingSession?.(sessionId)
     const closed = await closeCodexPublishedSession(
       this.deps.sessions,
       sessionId,
@@ -67,6 +70,7 @@ export class CodexStructuredSessionTeardown {
     ) {
       return Promise.resolve(false)
     }
+    this.deps.onClosingSession?.(sessionId)
     return closeCodexPublishedSession(this.deps.sessions, sessionId, this.deps.onEvent, {
       allowFailedSettlement: true,
       requestedClose: false,
