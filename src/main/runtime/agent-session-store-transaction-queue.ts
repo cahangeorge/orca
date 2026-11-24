@@ -1,4 +1,8 @@
-import type { AgentSessionOperationRow } from '../../shared/agent-session-operation-ledger'
+import { agentSessionRefusalError } from '../../shared/agent-session-wire-refusals'
+import {
+  agentSessionOperationKey,
+  type AgentSessionOperationRow
+} from '../../shared/agent-session-operation-ledger'
 import type { AgentSessionLease, AgentSessionRecord } from '../../shared/agent-session-record'
 import { raiseAgentSessionFencesAfterBackupRecovery } from './agent-session-backup-recovery-fence'
 import {
@@ -10,6 +14,15 @@ import {
   type LoadedAgentSessionStore
 } from './agent-session-record-store-file'
 import { withFileTransactionLock } from '../file-transaction-lock'
+
+export type AgentSessionRecordReadView = {
+  readonly hostId: string
+  readonly readOnly: boolean
+  readonly recoveredFromBackup: boolean
+  getRecord: (id: string) => AgentSessionRecord | null
+  getOperationRow: (caller: string, id: string) => AgentSessionOperationRow | null
+  isSessionUnreadable: (id: string) => boolean
+}
 
 /** Latch fields older builds wrote. Nothing reads them, and dropping them keeps a lease this build
  *  writes back from carrying a stale latch to an older build after a downgrade. */
@@ -102,13 +115,18 @@ export class AgentSessionStoreTransactionQueue {
     )
   }
 
-  transact<T>(apply: () => T): Promise<T> {
+  transact<T>(apply: () => T, options?: { requireAuthoritativePrimary: boolean }): Promise<T> {
     const run = this.queue.then(() =>
       withFileTransactionLock(this.filePath, async () => {
         if (this.readOnly) {
           throw new Error('agent_session_legacy_required')
         }
         await this.refreshExternallyChangedState()
+        if (options?.requireAuthoritativePrimary && this.diskRecoveredFromBackup) {
+          throw agentSessionRefusalError('agent_session_operation_unknown', {
+            reason: 'outcomeUnknown'
+          })
+        }
         const records = new Map(this.state.records)
         const operations = new Map(this.state.operations)
         const retiredClaimKeys = [...this.state.retiredClaimKeys]
@@ -154,6 +172,39 @@ export class AgentSessionStoreTransactionQueue {
           this.state.sessionTabs = sessionTabs
           throw error
         }
+      })
+    )
+    this.queue = run.catch(() => {})
+    return run
+  }
+
+  /** Detached read shares ordering/lock, never refreshes cache or persists a rewrite. */
+  readFresh<T>(read: (view: AgentSessionRecordReadView) => T | Promise<T>): Promise<T> {
+    const run = this.queue.then(() =>
+      withFileTransactionLock(this.filePath, async () => {
+        const loaded = await loadAgentSessionStore(this.filePath, this.hostId)
+        if (
+          !loaded.storeFound ||
+          loaded.readOnly ||
+          loaded.recoveredFromBackup ||
+          loaded.needsRewrite ||
+          loaded.legacyHandoffLeasesNormalized ||
+          loaded.state.hostId !== this.hostId
+        ) {
+          throw agentSessionRefusalError('agent_session_operation_unknown', {
+            reason: 'outcomeUnknown'
+          })
+        }
+        const { state, readOnly, recoveredFromBackup } = loaded
+        return read({
+          hostId: state.hostId,
+          readOnly,
+          recoveredFromBackup,
+          getRecord: (id) => structuredClone(state.records.get(id) ?? null),
+          getOperationRow: (caller, id) =>
+            structuredClone(state.operations.get(agentSessionOperationKey(caller, id)) ?? null),
+          isSessionUnreadable: (id) => state.unreadableRecords.has(id)
+        })
       })
     )
     this.queue = run.catch(() => {})

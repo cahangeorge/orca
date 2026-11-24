@@ -1,3 +1,4 @@
+import { NativeChatDecisionShadowCard } from './NativeChatDecisionShadowCard'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { agentSessionPromptQuestions } from '../../../../shared/agent-session-question-answer'
 import { dispatchStructuredAgentSessionComposerCommand } from '../../../../shared/structured-agent-session-composer'
@@ -323,6 +324,13 @@ export function NativeChatStructuredSession(
             controller.turnId === null ? null : { startedAt: controller.workingStartedAt ?? null }
           }
           onChange={(change) => void controller.threadGoal?.change(change)}
+        />
+      ) : null}
+      {props.agent === 'codex' && props.target.kind === 'local' ? (
+        <NativeChatDecisionShadowCard
+          key={props.sessionId}
+          target={props.target}
+          sessionId={props.sessionId}
         />
       ) : null}
       {/* Prompt cards take the composer's slot, below the background-task dock. */}

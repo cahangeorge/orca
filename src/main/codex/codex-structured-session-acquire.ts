@@ -1,3 +1,4 @@
+import { codexShadowEchoSettlement as shadowEcho } from './codex-decision-shadow'
 import {
   AgentSessionAcquisitionRefusal,
   AgentSessionPreSpawnError,
@@ -79,6 +80,7 @@ export async function acquireCodexStructuredSession(input: {
     turnCancellation,
     notificationRetries
   } = input
+  let publishedSession: CodexSession | undefined
   const sessionId = acquireInput.identity.sessionId
   const { previousAttempt, attempt } = acquisitions.start(sessionId)
   const acquisition = attempt.window
@@ -101,13 +103,7 @@ export async function acquireCodexStructuredSession(input: {
         bindPromptItemId: (journalItemId, threadId, promptKey, turnId) =>
           acquisition.prompts.bindJournalItemId(journalItemId, threadId, promptKey, turnId),
         clearPromptTurn: (threadId, turnId) => acquisition.prompts.clearTurn(threadId, turnId),
-        onUserMessageEcho: (clientMessageId, providerIdentity) => {
-          // Only a send THIS session admitted; an echo from history restore or
-          // another client names no submission of ours to settle.
-          if (dispatchEchoes.settle(clientMessageId)) {
-            deps.onDispatchSettledLate?.({ sessionId, clientMessageId, providerIdentity })
-          }
-        }
+        onUserMessageEcho: shadowEcho(deps, sessionId, () => publishedSession, dispatchEchoes)
       })
     : null
   const open = deps.openConnection ?? openCodexAppServerConnection
@@ -268,6 +264,7 @@ export async function acquireCodexStructuredSession(input: {
         ),
       ...(unbindReadingControl ? { unbindReadingControl } : {})
     }
+    publishedSession = session
     if (fastModeCatalog) {
       const model = opened.model ?? fastModeCatalog.result.current.model
       reconcileCodexFastModeOption(session, {

@@ -1,3 +1,4 @@
+import { createAgentSessionReservationOwner } from './agent-session-selected-first-reservation'
 import { agentSessionRefusalError } from '../../shared/agent-session-wire-refusals'
 import { commitConversationCommandRecord } from './agent-session-conversation-command-record'
 import { setAgentSessionRecordConversationName } from './agent-session-record-conversation-name'
@@ -56,11 +57,7 @@ import {
   type AgentSessionRestartProbeArgs
 } from './agent-session-restart-reconciliation'
 import { replaceAgentSessionRecordOptions } from './agent-session-record-options'
-import {
-  commitAgentSessionReservation,
-  type AgentSessionReserveRequest,
-  type AgentSessionReserveResult
-} from './agent-session-reservation-admission'
+import { commitAgentSessionReservation } from './agent-session-reservation-admission'
 import {
   agentSessionStoreRevision,
   agentSessionStorePath,
@@ -70,11 +67,14 @@ import { setAgentSessionTabVisibility } from './agent-session-tab-table'
 import { loadProtectedAgentSessionStore } from './agent-session-record-store-security'
 import {
   AgentSessionStoreTransactionQueue,
-  markAgentSessionStoreLeasesUnreconciled
+  markAgentSessionStoreLeasesUnreconciled,
+  type AgentSessionRecordReadView
 } from './agent-session-store-transaction-queue'
 
 export const AGENT_SESSION_LEASE_TTL_MS = 30_000,
   AGENT_SESSION_LEASE_RENEW_INTERVAL_MS = 10_000
+
+export type { AgentSessionRecordReadView } from './agent-session-store-transaction-queue'
 
 export class AgentSessionRecordStore {
   private readonly deathEvidenceListeners = new Set<(sessionId: string) => void>()
@@ -181,11 +181,19 @@ export class AgentSessionRecordStore {
   isClaimKeyVerifiable = (keyId: string, now: number): boolean =>
     isAgentSessionClaimKeyVerifiable(this.state, keyId, now)
 
-  async reserveOwner(request: AgentSessionReserveRequest): Promise<AgentSessionReserveResult> {
-    return this.transact(() =>
-      commitAgentSessionReservation(this.state, request, AGENT_SESSION_LEASE_TTL_MS)
-    )
+  /** Callback must not re-enter store mutations; the shared transaction lock remains held. */
+  withFreshRead<T>(read: (store: AgentSessionRecordReadView) => T | Promise<T>): Promise<T> {
+    return this.transactions.readFresh(read)
   }
+
+  reserveOwner = createAgentSessionReservationOwner(
+    () => this.transactions,
+    (request) =>
+      this.transact(() =>
+        commitAgentSessionReservation(this.state, request, AGENT_SESSION_LEASE_TTL_MS)
+      ),
+    AGENT_SESSION_LEASE_TTL_MS
+  )
 
   async commitProcessIdentity(
     args: AgentSessionProcessIdentityCommit

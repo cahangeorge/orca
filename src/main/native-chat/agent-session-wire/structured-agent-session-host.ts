@@ -1,3 +1,4 @@
+import { createSelectedCreateReplayReader } from '../../runtime/rpc/methods/structured-agent-session-selected-create-replay'
 import type { AgentSessionRewindParams } from '../../../shared/agent-session-rewind'
 import { rewindStructuredAgentSession } from './structured-agent-session-rewind'
 import { StructuredConversationCommandController } from './structured-conversation-command-controller'
@@ -233,6 +234,13 @@ export class StructuredAgentSessionHost {
     revealStructuredAgentSession(this.deps, sessionId, (id) => this.lifetime.conversation(id))
 
   private serialize = this.tasks.serialize.bind(this.tasks)
+
+  replaySelectedCreate = createSelectedCreateReplayReader({
+    store: () => this.deps.store,
+    getJournal: (id) => this.sessions.get(id)?.journal ?? null,
+    serialize: (id, read) => this.serialize(id, read),
+    now: () => this.now()
+  })
 
   attach(
     caller: StructuredAgentSessionCaller,

@@ -18,6 +18,11 @@ export type StructuredAgentSessionResumeSource = {
   providerSessionId: string
 }
 
+export type StructuredAgentSessionInitialOptions = {
+  readonly model: string
+  readonly effort: string
+}
+
 export type StructuredAgentSessionCreateParams = {
   envelope: AgentSessionMutationEnvelope
   worktree: string
@@ -25,6 +30,26 @@ export type StructuredAgentSessionCreateParams = {
   resumeFrom?: StructuredAgentSessionResumeSource
   /** Sent only to a host advertising `AGENT_SESSION_CREATE_TAB_ID_RUNTIME_CAPABILITY`. */
   tabId?: string
+  /** New Codex creates only; callers must negotiate host support before sending either field. */
+  initialOptions?: StructuredAgentSessionInitialOptions
+  /** Opaque host evidence for the selected catalog/account, not an account path. */
+  initialOptionsCatalogRef?: string
+}
+
+/** Old-digest payloads must not reach a host that would ignore the new selection. */
+export function hasValidStructuredAgentSessionCreateInitialSelection(
+  params: StructuredAgentSessionCreateParams
+): boolean {
+  if (params.initialOptions === undefined) {
+    return params.initialOptionsCatalogRef === undefined
+  }
+  return (
+    params.initialOptionsCatalogRef !== undefined &&
+    params.agent === 'codex' &&
+    params.resumeFrom === undefined &&
+    params.envelope.payloadFingerprint ===
+      structuredAgentSessionCreateFingerprint({ sessionId: params.envelope.sessionId, ...params })
+  )
 }
 
 /** Provider-prefixed so a session id names its lane on sight, and underscore-only
@@ -55,6 +80,8 @@ export function structuredAgentSessionCreateParams(args: {
   agent: AgentSessionHandleProvider
   resumeFrom?: StructuredAgentSessionResumeSource
   tabId?: string
+  initialOptions?: StructuredAgentSessionInitialOptions
+  initialOptionsCatalogRef?: string
   randomUuid: () => string
   now?: number
 }): StructuredAgentSessionCreateParams {
@@ -62,7 +89,13 @@ export function structuredAgentSessionCreateParams(args: {
     worktree: args.worktree,
     agent: args.agent,
     ...(args.resumeFrom ? { resumeFrom: args.resumeFrom } : {}),
-    ...(args.tabId ? { tabId: args.tabId } : {})
+    ...(args.tabId ? { tabId: args.tabId } : {}),
+    ...(args.initialOptions !== undefined
+      ? { initialOptions: { model: args.initialOptions.model, effort: args.initialOptions.effort } }
+      : {}),
+    ...(args.initialOptionsCatalogRef !== undefined
+      ? { initialOptionsCatalogRef: args.initialOptionsCatalogRef }
+      : {})
   }
   return {
     envelope: {

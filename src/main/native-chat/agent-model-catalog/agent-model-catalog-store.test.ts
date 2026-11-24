@@ -35,6 +35,29 @@ function success(...ids: string[]): AgentModelCatalogSuccess {
 }
 
 describe('agent model catalog store', () => {
+  it('keeps launch evidence revoked after failure TTL until a new successful listing', () => {
+    let at = 1_000
+    const store = new AgentModelCatalogStore({ now: () => at })
+    const entry = store.recordSuccess('fp', 'codex', success('sol'))!
+    expect(store.hasCurrentProcessLaunchEvidence(entry)).toBe(true)
+    store.recordFailure('fp', 'failed refresh')
+    at += AGENT_MODEL_CATALOG_FAILURE_TTL_MS
+    expect(store.hasActiveFailure('fp')).toBe(false)
+    expect(store.get('fp')).toBe(entry)
+    expect(store.hasCurrentProcessLaunchEvidence(entry)).toBe(false)
+    const refreshed = store.recordSuccess('fp', 'codex', success('sol'))!
+    expect(store.hasCurrentProcessLaunchEvidence(refreshed)).toBe(true)
+    expect(store.hasCurrentProcessLaunchEvidence(entry)).toBe(false)
+  })
+
+  it('retains the last-good picker listing but revokes launch evidence on an empty refresh', () => {
+    const store = new AgentModelCatalogStore()
+    const entry = store.recordSuccess('fp', 'codex', success('sol'))!
+    store.recordSuccess('fp', 'codex', { ...success('sol'), models: [] })
+    expect(store.get('fp')).toBe(entry)
+    expect(store.hasCurrentProcessLaunchEvidence(entry)).toBe(false)
+  })
+
   it('serves an entry at any age and flags staleness at the refresh threshold', () => {
     let at = 1_000
     const store = new AgentModelCatalogStore({ now: () => at })

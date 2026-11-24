@@ -68,6 +68,21 @@ export class OrcaRuntimeWithGetStructuredAgentSessionCreateSupport extends OrcaR
     }
   }
 
+  /** Internal read-only scope; never performs create/launch preparation. */
+  async resolveStructuredAgentSessionSelectionScope(worktreeSelector: string) {
+    const location = await this.resolveStructuredAgentSessionLocation(worktreeSelector)
+    if (location.executionHostId !== LOCAL_EXECUTION_HOST_ID || location.wslDistro !== null) {
+      return null
+    }
+    const workspacePath =
+      await this.resolveStructuredAgentSessionLocalWorkspacePath(worktreeSelector)
+    if (!workspacePath?.trim()) {
+      return null
+    }
+    const accountHome = await this.resolveStructuredAgentAccountHome('codex')
+    return { location: { ...location }, workspacePath, accountHome: { ...accountHome } }
+  }
+
   /** Where a structured chat here would run, when that is a directory on this machine. */
   async resolveStructuredAgentSessionLocalWorkspacePath(worktreeSelector: string) {
     const location = await this.resolveStructuredAgentSessionLocation(worktreeSelector)

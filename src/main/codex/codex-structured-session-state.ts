@@ -1,3 +1,4 @@
+import type { CodexDecisionShadowHooks } from './codex-decision-shadow'
 import type {
   AgentJournalItemIdentity,
   AgentSessionJournalIdentity
@@ -73,6 +74,7 @@ export type CodexStructuredSessionEvent =
   | { type: 'ended'; sessionId: string; reason: string; observedAt?: number }
 
 export type CodexStructuredSessionAdapterDeps = {
+  decisionShadow?: CodexDecisionShadowHooks
   resolveLaunch: (input: {
     identity: AgentSessionJournalIdentity
   }) => Promise<CodexStructuredLaunch>

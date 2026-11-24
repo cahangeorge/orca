@@ -12,7 +12,7 @@
  * in. Both callers run the same two halves, so orchestration gets that guarantee too.
  */
 
-import { refuse } from '../../../../shared/agent-session-wire-refusals'
+import { agentSessionRefusalError, refuse } from '../../../../shared/agent-session-wire-refusals'
 import { computeAgentSessionPayloadFingerprint } from '../../../../shared/agent-session-mutation-envelope'
 import type {
   AgentSessionAttachResult,
@@ -25,7 +25,10 @@ import {
 } from '../../../native-chat/agent-session-wire/structured-agent-session-attach'
 import type { StructuredAgentSessionHost } from '../../../native-chat/agent-session-wire/structured-agent-session-host'
 import type { StructuredAgentSessionCaller } from '../../../native-chat/agent-session-wire/structured-agent-session-host-types'
-import type { StructuredAgentSessionResumeSource } from '../../../../shared/structured-agent-session-create'
+import type {
+  StructuredAgentSessionInitialOptions,
+  StructuredAgentSessionResumeSource
+} from '../../../../shared/structured-agent-session-create'
 import type { OrcaRuntimeService } from '../../orca-runtime'
 import {
   resolveUncommittedStructuredCreate,
@@ -68,7 +71,7 @@ export function structuredAgentSessionCreateIntentFingerprint(params: {
 /** The pre-commit half. Throws; the caller is expected to run it inside
  *  `resolveUncommittedStructuredCreate` so a failure reaches the client as a refusal. */
 export async function prepareStructuredAgentSessionCreateForWorktree(args: {
-  runtime: OrcaRuntimeService
+  runtime: Pick<OrcaRuntimeService, 'resolveStructuredAgentSessionCreateIntent'>
   /** Installs the host lazily; called at the same point the RPC handler always installed it. */
   ensureHost: () => Promise<StructuredAgentSessionHost>
   envelope: AgentSessionMutationEnvelope
@@ -80,10 +83,25 @@ export async function prepareStructuredAgentSessionCreateForWorktree(args: {
    *  `--model`/`--effort` the dispatch asked for; a chat the user opened passes nothing and keeps
    *  the saved selection. Narrowed by the caller, so `{}` never reaches the reservation. */
   options?: Readonly<Record<string, string>>
-  /** The tab id the caller reserved for this chat, taken when its tab is published; absent, the tab
-   *  gets the id clients derive. Beside `options`, after the fingerprint, likewise. */
+  /** Host-validated pair merged over the seed, separate from legacy orchestration options. */
+  initialOptions?: StructuredAgentSessionInitialOptions
+  /** The reserved presentation tab; excluded from the attach fingerprint. */
   tabId?: string
 }): Promise<PreparedStructuredAgentSessionCreate> {
+  const initialSelection = args.initialOptions
+    ? { model: args.initialOptions.model, effort: args.initialOptions.effort }
+    : undefined
+  if (
+    initialSelection &&
+    (args.agent !== 'codex' ||
+      args.resumeFrom !== undefined ||
+      args.options !== undefined ||
+      args.envelope.expectedRuntimeFence !== null)
+  ) {
+    throw agentSessionRefusalError('agent_session_operation_invalid', {
+      reason: 'requestMalformed'
+    })
+  }
   // Adoption replay may need the record loaded from disk before source discovery can be skipped.
   let host = args.resumeFrom ? await args.ensureHost() : null
   const resolved = await args.runtime.resolveStructuredAgentSessionCreateIntent({
@@ -93,29 +111,31 @@ export async function prepareStructuredAgentSessionCreateForWorktree(args: {
     callerKey: args.caller.callerKey,
     ...(args.resumeFrom ? { resumeFrom: args.resumeFrom } : {})
   })
+  const attachParams: AgentSessionAttachParams = {
+    ...resolved,
+    ...(args.options ? { options: args.options } : {}),
+    ...(initialSelection
+      ? {
+          options: { ...resolved.options, ...initialSelection },
+          createInitialSelection: initialSelection
+        }
+      : {}),
+    ...(args.tabId ? { surfaceTabId: args.tabId } : {}),
+    envelope: args.envelope
+  }
   const hostFingerprint = computeAgentSessionPayloadFingerprint({
     method: 'agentSession.attach',
     sessionId: args.envelope.sessionId,
-    fields: attachFingerprintFields({ ...resolved, envelope: args.envelope })
+    fields: attachFingerprintFields(attachParams)
   })
+  attachParams.envelope = { ...args.envelope, payloadFingerprint: hostFingerprint }
   host ??= await args.ensureHost()
-  const { agent: _resolvedAgent, provider: _resolvedProvider, ...resolvedAttach } = resolved
   return {
     host,
-    attachParams: {
-      ...resolvedAttach,
-      // After the fingerprint, deliberately: `attachFingerprintFields` excludes options because
-      // they are the session's initial state, not its identity, so a retry that re-resolves them
-      // must replay rather than conflict.
-      ...(args.options ? { options: args.options } : {}),
-      ...(args.tabId ? { surfaceTabId: args.tabId } : {}),
-      provider: resolved.provider as 'claude' | 'codex',
-      agent: resolved.agent as 'claude' | 'codex',
-      envelope: { ...args.envelope, payloadFingerprint: hostFingerprint }
-    },
+    attachParams,
     tab: {
       workspaceId: resolved.location.workspaceId,
-      agent: resolved.agent as 'claude' | 'codex'
+      agent: resolved.agent
     }
   }
 }

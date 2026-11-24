@@ -131,7 +131,8 @@ export async function startCodexTurn(
 export async function dispatchCodexTurn(
   session: CodexTurnHost,
   input: { clientMessageId: string; body: AgentJournalMessageItem; requestedAt?: number },
-  timeoutMs: number | undefined
+  timeoutMs: number | undefined,
+  onTurnAnswer?: (turnId: string | null) => void
 ): Promise<AgentSessionDispatchOutcome> {
   let answer: { turnId: string | null } | false
   try {
@@ -155,6 +156,7 @@ export async function dispatchCodexTurn(
   if (!answer) {
     return { state: 'rejected', ...codexDispatchRejection(agentSessionFailureFact('queueFull')) }
   }
+  onTurnAnswer?.(answer.turnId)
   // An answer read after the turn it names already ended is settled by that end.
   const endedFirst = answer.turnId
     ? session.dispatchEchoes.bindTurn(input.clientMessageId, session.threadId, answer.turnId)
