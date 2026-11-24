@@ -65,13 +65,21 @@ const putBackResult: BundledSkillInstallResult = {
   ]
 }
 
-const freshness = {
+const refresh = vi.fn(async () => undefined)
+const freshness: {
+  targetKey: string
+  plan: BundledSkillPlan | null
+  unsupported: null
+  loading: boolean
+  error: null
+  refresh: typeof refresh
+} = {
   targetKey: 'local',
-  plan: planWithChoice as BundledSkillPlan | null,
+  plan: planWithChoice,
   unsupported: null,
   loading: false,
   error: null,
-  refresh: vi.fn(async () => undefined)
+  refresh
 }
 
 vi.mock('@/hooks/skills/freshness/useSkillFreshness', () => ({

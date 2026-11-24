@@ -162,8 +162,8 @@ function RefusalBlocks(props: {
         <Button
           type="button"
           variant="link"
-          size="xs"
-          className="h-auto self-start px-0 text-muted-foreground"
+          size="inlineText"
+          className="self-start"
           onClick={props.onShowAll}
         >
           {t(

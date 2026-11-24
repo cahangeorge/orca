@@ -22,11 +22,24 @@ const result = (...ops: BundledSkillOpOutcome[]): BundledSkillInstallResult => (
   scope: 'global',
   skills: [{ name: 'orca', status: 'ran', ops }]
 })
+type ToastAction = { label: string; onClick: (event: { preventDefault: () => void }) => void }
+
+function isToastAction(value: unknown): value is ToastAction {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'label' in value &&
+    typeof value.label === 'string' &&
+    'onClick' in value &&
+    typeof value.onClick === 'function'
+  )
+}
+
 const shown = (kind: 'warning' | 'info') =>
   vi.mocked(toast[kind]).mock.calls.map(([title, options]) => ({
     title,
-    description: (options as { description?: string }).description,
-    action: (options as { action?: { label: string } }).action?.label
+    description: typeof options?.description === 'string' ? options.description : undefined,
+    action: isToastAction(options?.action) ? options.action.label : undefined
   }))
 const warnings = () => shown('warning')
 const infos = () => shown('info')
@@ -214,12 +227,13 @@ describe('automatic update result notices', () => {
           backupRefusal: { path: former, source: 'in-place', onlyNotice: true }
         })
       )
-      const options = vi.mocked(toast.warning).mock.calls[0][1] as {
-        action: { label: string; onClick: (event: { preventDefault: () => void }) => void }
+      const action = vi.mocked(toast.warning).mock.calls[0][1]?.action
+      if (!isToastAction(action)) {
+        throw new Error('expected a path action')
       }
-      expect(options.action.label).toBe(label)
+      expect(action.label).toBe(label)
       const preventDefault = vi.fn()
-      options.action.onClick({ preventDefault })
+      action.onClick({ preventDefault })
       await Promise.resolve()
       await Promise.resolve()
       // Sonner closes an acted-on toast unless the action prevents it; this one never closes itself.
