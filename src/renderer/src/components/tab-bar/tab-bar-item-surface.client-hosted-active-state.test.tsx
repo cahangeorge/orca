@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
 
-import type React from 'react'
+import React from 'react'
+import { render, cleanup } from '@testing-library/react'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { WorkspaceVisibleTabType } from '../../../../shared/tab-types'
 import {
@@ -8,6 +10,8 @@ import {
   getClientHostedBrowserRowSelection,
   selectClientHostedBrowserRow
 } from '@/lib/pane-manager/client-hosted-browser-row-state'
+import { getTabDragLabel, getTabLayoutSignature } from './tab-bar-item-model'
+import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import type { TabBarItem } from './tab-bar-item-model'
 import type { TabBarProps } from './tab-bar-props'
 import type { TabBarRuntimeModel } from './use-tab-bar-runtime-model'
@@ -163,4 +167,77 @@ describe('client-hosted row while a real tab is activated', () => {
       expect(getClientHostedBrowserRowSelection()).toBeNull()
     }
   )
+})
+
+describe('Native Chat automatic tab titles', () => {
+  const chat: TabBarItem = {
+    type: 'agent-session',
+    id: 'chat-1',
+    unifiedTabId: 'chat-1',
+    isPinned: false,
+    data: {
+      id: 'chat-1',
+      entityId: 'session-1',
+      worktreeId: 'wt-1',
+      groupId: 'group-1',
+      contentType: 'agent-session',
+      agentSessionAgent: 'codex',
+      label: 'Codex Chat',
+      generatedLabel: 'Fix login retries',
+      customLabel: null,
+      color: null,
+      sortOrder: 0,
+      createdAt: 0
+    }
+  }
+
+  it.each([true, false])(
+    'renders the actual Native Chat tab text when automatic titles are %s',
+    (enabled) => {
+      const nodes = renderTabBarItems({
+        items: [chat],
+        props: makeProps('agent-session'),
+        runtime: { ...RUNTIME, generatedTabTitlesEnabled: enabled },
+        dropIndicatorByVisibleId: new Map(),
+        includeTopTabBorder: true,
+        activeClientHostedBrowserRowId: null,
+        togglePinned: () => {}
+      })
+      const tab = (nodes[0] as React.ReactElement<{ tab: TerminalTab }>).props.tab
+      expect(tab.title).toBe(enabled ? 'Fix login retries' : 'Codex Chat')
+      const view = render(<TooltipProvider>{nodes}</TooltipProvider>)
+      expect(view.getByText(enabled ? 'Fix login retries' : 'Codex Chat')).toBeTruthy()
+      cleanup()
+    }
+  )
+
+  it('renders a manual Native Chat name ahead of a generated title', () => {
+    const nodes = renderTabBarItems({
+      items: [{ ...chat, data: { ...chat.data, customLabel: 'My investigation' } }],
+      props: makeProps('agent-session'),
+      runtime: { ...RUNTIME, generatedTabTitlesEnabled: true },
+      dropIndicatorByVisibleId: new Map(),
+      includeTopTabBorder: true,
+      activeClientHostedBrowserRowId: null,
+      togglePinned: () => {}
+    })
+    const view = render(<TooltipProvider>{nodes}</TooltipProvider>)
+    expect(view.getByText('My investigation')).toBeTruthy()
+    expect(view.queryByText('Fix login retries')).toBeNull()
+    cleanup()
+  })
+
+  it('uses the same title for dragging and layout when automatic titles are toggled', () => {
+    expect(getTabDragLabel(chat, true)).toBe('Fix login retries')
+    expect(getTabDragLabel(chat, false)).toBe('Codex Chat')
+    expect(
+      getTabLayoutSignature(chat, { generatedTitlesEnabled: true, isExpanded: false })
+    ).toContain('Fix login retries')
+    if (chat.type !== 'agent-session') {
+      throw new Error('expected Native Chat fixture')
+    }
+    expect(
+      getTabDragLabel({ ...chat, data: { ...chat.data, customLabel: 'My investigation' } }, true)
+    ).toBe('My investigation')
+  })
 })

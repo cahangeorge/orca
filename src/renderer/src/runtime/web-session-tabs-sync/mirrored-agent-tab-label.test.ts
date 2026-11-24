@@ -59,6 +59,31 @@ describe('buildMirroredAgentTabs', () => {
     expect(build(snapshot, [existing]).customLabel).toBe('My rename')
   })
 
+  it('keeps a generated title across host snapshots for the same session', () => {
+    const snapshot = snapshotWith('codex', 'Codex Chat')
+    const existing: Tab = { ...build(snapshot), generatedLabel: 'Fix login retries' }
+    expect(build(snapshot, [existing]).generatedLabel).toBe('Fix login retries')
+    const otherSession = snapshotWith('claude', 'Claude Chat')
+    expect(build(otherSession, [existing]).generatedLabel).toBeUndefined()
+  })
+
+  it('clears a generated title when a new conversation replaces the session in the same tab', () => {
+    const existing: Tab = {
+      ...build(snapshotWith('codex', 'Codex Chat')),
+      generatedLabel: 'Old task'
+    }
+    const snapshot = snapshotWith('codex', 'Codex Chat')
+    const hostTab = snapshot.tabs[0]
+    if (hostTab.type !== 'agent-session') {
+      throw new Error('expected Native Chat fixture')
+    }
+    hostTab.sessionId = 'codex-new'
+    hostTab.replacesSessionId = 'codex-1'
+    const replacement = build(snapshot, [existing])
+    expect(replacement.id).toBe(existing.id)
+    expect(replacement.generatedLabel).toBeUndefined()
+  })
+
   it('leaves customLabel null when the tab was never renamed', () => {
     // Guard: assert the row is actually built, so this cannot pass on an empty
     // result the way a bare null-check would.

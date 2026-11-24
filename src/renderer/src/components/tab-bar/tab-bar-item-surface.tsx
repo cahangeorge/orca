@@ -1,5 +1,8 @@
 import React from 'react'
-import { resolveTerminalTabTitle } from '../../../../shared/tab-title-resolution'
+import {
+  resolveTerminalTabTitle,
+  resolveUnifiedTabLabel
+} from '../../../../shared/tab-title-resolution'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import { isAgentSessionHandleProvider } from '../../../../shared/agent-session-provider-handle'
@@ -231,7 +234,8 @@ export function renderTabBarItems({
         id: item.id,
         ptyId: null,
         worktreeId,
-        title: item.data.label,
+        title: resolveUnifiedTabLabel(item.data, generatedTabTitlesEnabled, item.data.label),
+        generatedTitle: item.data.generatedLabel,
         customTitle: item.data.customLabel,
         manualWorkPhase: item.data.manualWorkPhase,
         color: item.data.color,

@@ -23,6 +23,7 @@ import { useAppStore } from '@/store'
 import { getActiveRuntimeTarget, type RuntimeClientTarget } from '@/runtime/runtime-rpc-client'
 import { getStructuredAgentSessionStatusFeed } from '@/runtime/structured-agent-session-status-feed'
 import { getStructuredAgentSessionTabs, type StructuredTab } from './structured-agent-session-tabs'
+import { useNativeChatConversationTitle } from './useNativeChatConversationTitle'
 
 // Re-exported so the bridge stays the one import site its consumers already know.
 export { getStructuredAgentSessionTabs } from './structured-agent-session-tabs'
@@ -191,9 +192,19 @@ function StructuredAgentSessionStatusProjection({ tab }: { tab: StructuredTab })
     [environmentId]
   )
   const { summary, observation } = useStructuredAgentSessionStatusSummary(tab.entityId, target)
+  const generatedTitlesEnabled = useAppStore(
+    (state) => state.settings?.tabAutoGenerateTitle === true
+  )
+  useNativeChatConversationTitle(
+    tab,
+    target,
+    generatedTitlesEnabled,
+    !!summary?.status,
+    summary?.latestPrompt
+  )
   useEffect(() => {
     projectStatus(tab, summary, observation)
-  }, [summary, observation, tab])
+  }, [summary, observation, tab, generatedTitlesEnabled])
   useEffect(
     () => () =>
       useAppStore.getState().removeAgentStatus(structuredAgentSessionPaneKey(tab.id, tab.entityId)),
