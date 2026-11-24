@@ -18,7 +18,7 @@ import { useOrcaTeamFeatureBlocked } from '@/lib/orca-team-policy'
 import { ORCA_CLOUD_TEAM_POLICY_FLAGS } from '../../../../../../shared/orca-profiles/orca-cloud-team-policy'
 import { AgentCapabilityStatusNote, AgentCapabilityStatusPill } from './AgentCapabilityStatusBadges'
 import {
-  bundledSkillInstallNeedsAttention,
+  bundledSkillInstallBlocksFreshAction,
   useBundledSkillInstall,
   type BundledSkillInstall
 } from '@/hooks/skills/installation/use-bundled-skill-install'
@@ -241,7 +241,7 @@ function AgentCapabilitySetupControls(props: {
   const showSetupAction =
     installState.kind !== 'unsupported' &&
     props.installAction?.kind !== 'unsupported' &&
-    !bundledSkillInstallNeedsAttention(installState) &&
+    !bundledSkillInstallBlocksFreshAction(installState) &&
     props.installAction?.kind !== 'attention'
   // Why: a disabled install button is noise once everything is set up.
   const showAllReady =

@@ -4,8 +4,9 @@ import type {
   BundledSkillOpOutcome
 } from '../../../../../shared/skills/bundled/bundled-skill-plan'
 
-vi.mock('sonner', () => ({ toast: { warning: vi.fn(), info: vi.fn() } }))
-vi.mock('@/lib/files/os-open/reveal-in-file-manager', () => ({ revealInFileManager: vi.fn() }))
+vi.mock('sonner', () => ({ toast: { warning: vi.fn(), info: vi.fn(), success: vi.fn() } }))
+const reveal = vi.fn(async () => undefined)
+vi.mock('@/lib/files/os-open/reveal-in-file-manager', () => ({ revealInFileManager: reveal }))
 vi.mock('./skill-backup-location', () => ({
   skillBackupDirectory: (home: string) => `${home}/.agents/.orca-skill-backups`,
   skillBackupHost: () => ({ kind: 'local' })
@@ -189,4 +190,47 @@ describe('automatic update result notices', () => {
     expect(cut.endsWith('2026-11-23T18-02-11-512Z')).toBe(true)
     expect(middleTruncatePath('/short/path')).toBe('/short/path')
   })
+
+  it.each([
+    ['local reveal', { kind: 'local' } as const, 'Show in folder'],
+    ['remote copy', { kind: 'ssh', targetId: 'box' } as const, 'Copy path']
+  ])(
+    'keeps the notice open when its %s fails, so the path can still be used',
+    async (_, target, label) => {
+      const writeClipboardText = vi.fn(async () => {
+        throw new Error('clipboard unavailable')
+      })
+      vi.stubGlobal('window', { api: { ui: { writeClipboardText } } })
+      reveal.mockRejectedValueOnce(new Error('launch failed'))
+      const former = '/home/u/.gemini/skills/orca'
+      reportPreservedEdits(
+        target,
+        result({
+          path: `${SKILLS}/orca`,
+          kind: 'update',
+          status: 'failed',
+          error: 'EXDEV',
+          contentApplied: true,
+          backupRefusal: { path: former, source: 'in-place', onlyNotice: true }
+        })
+      )
+      const options = vi.mocked(toast.warning).mock.calls[0][1] as {
+        action: { label: string; onClick: (event: { preventDefault: () => void }) => void }
+      }
+      expect(options.action.label).toBe(label)
+      const preventDefault = vi.fn()
+      options.action.onClick({ preventDefault })
+      await Promise.resolve()
+      await Promise.resolve()
+      // Sonner closes an acted-on toast unless the action prevents it; this one never closes itself.
+      expect(preventDefault).toHaveBeenCalled()
+      expect(toast.success).not.toHaveBeenCalled()
+      if (target.kind === 'local') {
+        expect(reveal).toHaveBeenCalledWith(former, 'local')
+      } else {
+        expect(writeClipboardText).toHaveBeenCalledWith(former)
+      }
+      vi.unstubAllGlobals()
+    }
+  )
 })

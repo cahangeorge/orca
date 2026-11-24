@@ -1,6 +1,10 @@
 import { Fragment } from 'react'
+import { toast } from 'sonner'
+import { Copy } from 'lucide-react'
 import { collapseHomePath } from '../../../../../shared/skills/bundled/bundled-skill-locations'
 import { cn } from '@/lib/class-names'
+import { useTranslate } from '@/i18n/use-translate'
+import { Button } from '@/components/ui/button'
 
 /**
  * A host path in a skill result: shown from `~/` when it is under the host's home, wrapping only
@@ -39,5 +43,44 @@ export function SkillPathText({
         </Fragment>
       ))}
     </span>
+  )
+}
+
+/**
+ * A retained path the user may need to act on, with a keyboard-reachable Copy path that copies
+ * the full host path (not the `~` form). For a copy no later plan mentions, this is its only receipt.
+ */
+export function SkillRetainedPathLine({
+  path,
+  homeDirectory,
+  className
+}: {
+  path: string
+  homeDirectory?: string
+  className?: string
+}): React.JSX.Element {
+  const t = useTranslate()
+  const copyPath = async (): Promise<void> => {
+    try {
+      await window.api.ui.writeClipboardText(path)
+      toast.success(t('auto.components.skills.SkillRow.pathCopied', 'Path copied'))
+    } catch {
+      // The path stays on screen, so the user can try again.
+    }
+  }
+  return (
+    <div className={cn('flex min-w-0 items-start gap-1.5', className)}>
+      <SkillPathText path={path} homeDirectory={homeDirectory} className="flex-1" />
+      <Button
+        type="button"
+        variant="ghost"
+        size="xs"
+        className="shrink-0"
+        onClick={() => void copyPath()}
+      >
+        <Copy className="size-3" />
+        {t('auto.components.skills.SkillRow.copyPath', 'Copy path')}
+      </Button>
+    </div>
   )
 }

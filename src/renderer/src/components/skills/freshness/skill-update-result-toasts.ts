@@ -34,7 +34,20 @@ function warnAboutEdits(title: string, description: string): void {
   toast.warning(title, { description, duration: Number.POSITIVE_INFINITY })
 }
 
-/** Show in folder where this computer can open the path, Copy path for another host's. */
+async function copyRetainedPath(path: string): Promise<void> {
+  try {
+    await window.api.ui.writeClipboardText(path)
+    toast.success(translate('auto.components.skills.SkillRow.pathCopied', 'Path copied'))
+  } catch {
+    // The notice stays open, so the user can try again.
+  }
+}
+
+/**
+ * Show in folder where this computer can open the path, Copy path for another host's. The toast
+ * may be the only notice of this path, so acting on it never closes it: a failed reveal or copy
+ * leaves the path and the action in place, and only Dismiss closes it.
+ */
 function retainedPathAction(target: BundledSkillTarget, path: string) {
   return target.kind === 'local'
     ? {
@@ -42,11 +55,17 @@ function retainedPathAction(target: BundledSkillTarget, path: string) {
           'auto.components.skills.skillBackupRefusal.showInFolder',
           'Show in folder'
         ),
-        onClick: () => void revealInFileManager(path, LOCAL_EXECUTION_HOST_ID)
+        onClick: (event: { preventDefault: () => void }) => {
+          event.preventDefault()
+          void revealInFileManager(path, LOCAL_EXECUTION_HOST_ID)
+        }
       }
     : {
         label: translate('auto.components.skills.SkillRow.copyPath', 'Copy path'),
-        onClick: () => void window.api.ui.writeClipboardText(path)
+        onClick: (event: { preventDefault: () => void }) => {
+          event.preventDefault()
+          void copyRetainedPath(path)
+        }
       }
 }
 

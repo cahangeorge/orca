@@ -4,6 +4,7 @@ import {
   summarizeBundledSkillOutcomes,
   type BundledSkillResultSummary
 } from '../../../../../shared/skills/bundled/bundled-skill-summary'
+import { bundledSkillResultRetainsPaths } from '../../../../../shared/skills/bundled/bundled-skill-backup-refusal'
 import { notifyInstalledAgentSkillsChanged } from '@/hooks/skills/discovery/installed-agent-skill-discovery'
 import {
   bundledSkillTargetKey,
@@ -69,8 +70,14 @@ function slotFor(targetKey: string): RunSlot {
   return slot
 }
 
+/** A plain success may fade; one that moved or kept a copy names its path until dismissed. */
 function isSuccess(run: SkillUpdateRun): boolean {
-  return run.state === 'done' && run.summary.ok && !run.needsAttention
+  return (
+    run.state === 'done' &&
+    run.summary.ok &&
+    !run.needsAttention &&
+    !bundledSkillResultRetainsPaths(run.result)
+  )
 }
 
 function clearSuccessTimer(slot: RunSlot): void {

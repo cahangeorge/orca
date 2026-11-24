@@ -88,6 +88,24 @@ describe('cross-drive backup refusal copy', () => {
     )
   })
 
+  it('Settings says "won\'t remind you" only under the copy it applies to', () => {
+    const former = '/home/u/.gemini/skills/orca'
+    const kept = `${SKILLS}/orca`
+    const line = settings(
+      outcome(
+        refused('in-place', former, {
+          kind: 'update',
+          contentApplied: true,
+          backupRefusal: { path: former, source: 'in-place', onlyNotice: true }
+        }),
+        refused('in-place', kept, { path: '/home/u/.claude/skills/orca' })
+      )
+    )
+    expect(line).toBe(
+      `Updated · Old copy kept as is\n${former}\nMove it out of the skills folder. Orca won't remind you.\n${kept}`
+    )
+  })
+
   it('S2: a left-over copy follows whether the main copy updated', () => {
     const leftover = `${SKILLS}/.orca.orca-old-1`
     const keep = refused('leftover', leftover, { kind: 'keep', currentConfirmed: true })

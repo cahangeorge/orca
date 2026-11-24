@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
@@ -9,6 +9,7 @@ import {
   autoUpdateInstalledBundledSkills,
   previewBundledSkillInstall
 } from './bundled-skill-installation'
+import { recordBundledSkillDigestWritten } from './bundled-skill-written-digests'
 import {
   makeSkillHome,
   NAME,
@@ -80,4 +81,56 @@ describe('automatic update digest marker', () => {
     )
     expect(plan.skills[0].ops[0].kind).toBe('keep')
   })
+
+  it.each(['changed', 'unchanged'] as const)(
+    'counts a former name as current only if its retirement did not find it %s',
+    async (alias) => {
+      const home = await makeSkillHome()
+      const former = join(dirname(home.claude), ALIAS)
+      const other = '---\nname: test-skill\ndescription: Other build\n---\n\nOther\n'
+      // Another build's shared copy (no write evidence of ours), a current former-name copy with a
+      // stage left over (a recovery keep), and the canonical link that retires the former name.
+      await writeCopy(home.shared, other)
+      await writeCopy(former, NEW_TEXT)
+      await mkdir(join(dirname(home.claude), `.${ALIAS}.orca-stage-abc`), { recursive: true })
+      const input = {
+        ...serviceInput(home, { agents: ['claude'], installedOnly: true }),
+        sources: [{ ...NEW_SOURCE, aliases: [ALIAS] }]
+      }
+      const first = await previewBundledSkillInstall(input)
+      const shared = first.skills[0].ops.find((op) => op.path === home.shared)
+      await recordBundledSkillDigestWritten(
+        nativeBundledSkillFilesystem,
+        home.home,
+        NAME,
+        shared?.observed.kind === 'folder' ? (shared.observed.skillDigest ?? '') : ''
+      )
+      const digests = join(home.home, '.agents', '.orca-skill-digests', NAME)
+      const before = await snapshot(digests)
+      const plan = await previewBundledSkillInstall(input)
+      expect(plan.skills[0].ops.map((op) => [op.path, op.kind, op.reason])).toEqual([
+        [home.shared, 'leave', 'other-build'],
+        [home.claude, 'link', undefined],
+        [former, 'keep', undefined]
+      ])
+      const filesystem: BundledSkillFilesystem = {
+        ...nativeBundledSkillFilesystem,
+        createLink: async (target, path) => {
+          await nativeBundledSkillFilesystem.createLink(target, path)
+          if (alias === 'changed' && path === home.claude) {
+            await writeFile(join(former, 'SKILL.md'), 'edited before its retirement\n')
+          }
+        }
+      }
+      const result = await autoUpdateInstalledBundledSkills({ ...input, filesystem, names: [NAME] })
+      const link = result.skills[0].ops.find((op) => op.path === home.claude)
+      if (alias === 'changed') {
+        expect(link?.status).not.toBe('done')
+        expect(await snapshot(digests)).toBe(before)
+      } else {
+        expect(link?.status).toBe('done')
+        expect(await snapshot(digests)).not.toBe(before)
+      }
+    }
+  )
 })

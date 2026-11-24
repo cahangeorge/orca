@@ -12,7 +12,7 @@ import {
 } from '@/hooks/skills/discovery/useInstalledAgentSkills'
 import { useBundledSkillInstallAction } from '@/hooks/skills/installation/use-bundled-skill-install-action'
 import {
-  bundledSkillInstallNeedsAttention,
+  bundledSkillInstallBlocksFreshAction,
   useBundledSkillInstall
 } from '@/hooks/skills/installation/use-bundled-skill-install'
 import {
@@ -133,7 +133,7 @@ function BundledLinearAgentSkillInstallCta({
           )}
           {!showInstall ||
           state.kind === 'unsupported' ||
-          bundledSkillInstallNeedsAttention(state) ? null : (
+          bundledSkillInstallBlocksFreshAction(state) ? null : (
             <BundledSkillReplaceHint
               action={action}
               replacing={!installing && Boolean(replacePaths)}

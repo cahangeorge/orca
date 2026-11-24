@@ -171,3 +171,20 @@ function AfterRefresh(): React.JSX.Element {
 }
 
 export const afterRefresh = defineFixture({ render: () => <AfterRefresh />, width: 320 })
+
+/** One skill with a copy no plan will mention again beside an ordinary kept copy: each keeps its own next step. */
+function MixedPaths(): React.JSX.Element {
+  return (
+    <div className="bg-background p-4">
+      {status([
+        putBack({ kind: 'update', contentApplied: true }),
+        refused('in-place', '/Users/sam/.claude/skills/orca-cli', {
+          path: '/Users/sam/.claude/skills/orca-cli',
+          kind: 'replace'
+        })
+      ])}
+    </div>
+  )
+}
+
+export const mixedPaths = defineFixture({ render: () => <MixedPaths />, width: 320 })

@@ -4,6 +4,7 @@ import { useTranslate } from '@/i18n/use-translate'
 import { requestSkillFreshnessUpdateDialog } from '../../skills/freshness/skill-freshness-update-dialog'
 import { useLatestSkillUpdateRun } from '../../skills/freshness/skill-update-run-store'
 import { updatedSkillsLabel } from '../../skills/freshness/skill-plan-op-copy'
+import { bundledSkillResultRetainsPaths } from '../../../../../shared/skills/bundled/bundled-skill-backup-refusal'
 
 // Keep reporting after the update dialog closes; statusBarItems must not hide the remaining progress surface.
 export function SkillUpdateStatusSegment(): React.JSX.Element | null {
@@ -47,7 +48,7 @@ export function SkillUpdateStatusSegment(): React.JSX.Element | null {
           'auto.components.status.bar.SkillUpdateStatusSegment.successLabel',
           'Skills updated'
         ),
-        tooltip: updatedSkillsLabel(run.summary, t),
+        tooltip: updatedSkillsLabel(run.summary, t, bundledSkillResultRetainsPaths(run.result)),
         ariaLabel: t(
           'auto.components.status.bar.SkillUpdateStatusSegment.successAria',
           'Skills updated. Click to open details.'

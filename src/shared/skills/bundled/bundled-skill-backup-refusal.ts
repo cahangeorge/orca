@@ -82,3 +82,15 @@ export function bundledSkillResultOnlyRefused(result: BundledSkillInstallResult)
     failing.every((op) => op.backupRefusal)
   )
 }
+
+/**
+ * The result names a path the user may need: a refused copy or a finished backup. Such a result
+ * is its own receipt, so it stays until the user dismisses it or a new run replaces it.
+ */
+export function bundledSkillResultRetainsPaths(
+  result: BundledSkillInstallResult | null | undefined
+): boolean {
+  return (result?.skills ?? []).some((skill) =>
+    skill.ops.some((op) => op.backupRefusal || bundledSkillOpBackupPaths(op).length > 0)
+  )
+}

@@ -137,11 +137,16 @@ export async function autoUpdateBundledSkills(
         skills.push(ran)
       }
       // An already-current copy (keep-only, so nothing ran) written before markers existed. A
-      // location this run rechecked and found changed no longer counts as the plan saw it.
+      // location this run rechecked and found changed no longer counts as the plan saw it: an op
+      // that did not finish may have failed its own recheck or one of its retired placements'.
       const stale = new Set(
-        (ran?.ops ?? []).flatMap((op) =>
-          op.kind === 'keep' && op.status !== 'done' && !op.currentConfirmed ? [op.path] : []
-        )
+        (ran?.ops ?? []).flatMap((outcome) => {
+          if (outcome.status === 'done' || outcome.currentConfirmed) {
+            return []
+          }
+          const planned = ops.find((op) => op.path === outcome.path)
+          return [outcome.path, ...(planned?.previous ?? []).map((previous) => previous.path)]
+        })
       )
       const fresh = { ...entry, ops: entry.ops.filter((op) => !stale.has(op.path)) }
       if (holdsCurrentBundledSkillCopy(fresh)) {

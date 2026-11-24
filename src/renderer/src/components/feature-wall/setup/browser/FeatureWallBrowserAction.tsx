@@ -16,7 +16,7 @@ import { track } from '@/diagnostics/telemetry/telemetry'
 import { activateAndRevealWorktree } from '@/lib/workspace/activation/worktree-activation'
 import { useAppStore } from '@/store/index'
 import {
-  bundledSkillInstallNeedsAttention,
+  bundledSkillInstallBlocksFreshAction,
   useBundledSkillInstall
 } from '@/hooks/skills/installation/use-bundled-skill-install'
 import { BundledSkillInstallStatus } from '../../../skills/setup/BundledSkillInstallStatus'
@@ -208,7 +208,7 @@ function BrowserSkillInstallForRuntime({
   if (
     skillInstall.state.kind === 'unsupported' ||
     (!legacyWsl && installAction.kind === 'unsupported') ||
-    bundledSkillInstallNeedsAttention(skillInstall.state) ||
+    bundledSkillInstallBlocksFreshAction(skillInstall.state) ||
     (!legacyWsl && installAction.kind === 'attention')
   ) {
     return (

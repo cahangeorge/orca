@@ -16,11 +16,8 @@ import { cn } from '@/lib/class-names'
 import { useTranslate } from '@/i18n/use-translate'
 import { skillBackupPaths } from '../freshness/skill-backup-location'
 import { SkillBackupPathLine } from '../freshness/SkillBackupPathLine'
-import { SkillPathText } from '../freshness/SkillPathText'
-import {
-  bundledSkillRefusalNotices,
-  bundledSkillResultOnlyRefused
-} from '../../../../../shared/skills/bundled/bundled-skill-backup-refusal'
+import { SkillRetainedPathLine } from '../freshness/SkillPathText'
+import { bundledSkillResultOnlyRefused } from '../../../../../shared/skills/bundled/bundled-skill-backup-refusal'
 
 export function BundledSkillInstallStatus(props: {
   install: Pick<BundledSkillInstall, 'state' | 'retry'>
@@ -62,10 +59,10 @@ export function BundledSkillInstallStatus(props: {
       className="basis-full"
     />
   ))
-  // A refused backup is a result, not an error: muted, and Retry only where a retry can find the copy.
+  // A refused backup is a result, not an error: muted, and no result-bound Retry. The parent offers
+  // the live plan's own action instead (a fresh Replace asks for fresh consent), so Retry never
+  // reuses an old run's choices. A run that also failed some other way keeps Retry.
   const onlyRefused = ran ? bundledSkillResultOnlyRefused(ran.result) : false
-  const retryFindsNothing =
-    onlyRefused && bundledSkillRefusalNotices(ran?.result).every((notice) => !notice.offeredAgain)
   const showsRun = state === props.install.state
   const retained =
     !showsRun && ranBlocks ? (
@@ -118,7 +115,7 @@ export function BundledSkillInstallStatus(props: {
           {message}
         </p>
       )}
-      {problem && !(showsRun && retryFindsNothing) ? (
+      {problem && !(showsRun && onlyRefused) ? (
         <Button type="button" variant="ghost" size={props.buttonSize ?? 'sm'} onClick={retry}>
           <RefreshCw className="size-3.5" />
           {t('auto.components.settings.AgentSkillSetupPanel.retrySetup', 'Retry')}
@@ -153,15 +150,12 @@ function RefusalBlocks(props: {
       {visible.map((block) => (
         <div key={block.headline} className="flex min-w-0 flex-col">
           <p>{block.headline}</p>
-          {block.paths.map((path) => (
-            <SkillPathText
-              key={path}
-              path={path}
-              homeDirectory={props.homeDirectory}
-              className={indent}
-            />
+          {block.paths.map(({ path, next }) => (
+            <div key={path} className={cn('flex min-w-0 flex-col', indent)}>
+              <SkillRetainedPathLine path={path} homeDirectory={props.homeDirectory} />
+              {next ? <p className="text-muted-foreground">{next}</p> : null}
+            </div>
           ))}
-          {block.next ? <p className={cn('text-muted-foreground', indent)}>{block.next}</p> : null}
         </div>
       ))}
       {hidden > 0 ? (

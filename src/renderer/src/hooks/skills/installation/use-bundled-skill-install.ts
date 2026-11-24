@@ -64,10 +64,10 @@ export type BundledSkillInstall = {
 
 const IDLE: BundledSkillInstallState = { kind: 'idle' }
 
-/** A failed request, or a run that left something undone: "Needs attention" with Retry. */
-export function bundledSkillInstallNeedsAttention(state: BundledSkillInstallState): boolean {
-  return state.kind === 'failed' || (state.kind === 'done' && !state.summary.ok)
-}
+export {
+  bundledSkillInstallBlocksFreshAction,
+  bundledSkillInstallNeedsAttention
+} from './bundled-skill-install-attention'
 
 /** Install for every detected agent on the planned owner host; remote installs must never fall back to this client. */
 export function useBundledSkillInstall(

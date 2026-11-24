@@ -168,11 +168,11 @@ function settingsHeadline(summary: RefusalSummary, t: Translate): string {
   )
 }
 
-/**
- * One skill's Settings result: its short state, each retained path on its own line, then what to
- * do when no later plan may mention a copy again.
- */
-export type SkillRefusalSettingsBlock = { headline: string; paths: string[]; next?: string }
+/** A retained path, and what to do about it when no later plan may mention that copy again. */
+export type SkillRefusalSettingsPath = { path: string; next?: string }
+
+/** One skill's Settings result: its short state, then each retained path on its own line. */
+export type SkillRefusalSettingsBlock = { headline: string; paths: SkillRefusalSettingsPath[] }
 
 /**
  * Settings result after a refused backup. A batch with more than one skill to report gets a block
@@ -196,15 +196,18 @@ export function skillRefusalSettingsBlocks(
     const headline = otherSkill(outcome)
     return headline ? [{ headline: `${outcome.name}: ${headline}`, paths: [] }] : []
   })
+  // Why per path: one skill can hold a copy no plan mentions again beside one a retry still finds.
   const blocks = refused.map((summary): SkillRefusalSettingsBlock => ({
     headline: settingsHeadline(summary, t),
-    paths: summary.notices.map((notice) => notice.path),
-    ...(summary.notices.some((notice) => !notice.offeredAgain) && {
-      next: t(
-        'auto.components.skills.skillBackupRefusal.noReminder',
-        "Move it out of the skills folder. Orca won't remind you."
-      )
-    })
+    paths: summary.notices.map((notice) => ({
+      path: notice.path,
+      ...(!notice.offeredAgain && {
+        next: t(
+          'auto.components.skills.skillBackupRefusal.noReminder',
+          "Move it out of the skills folder. Orca won't remind you."
+        )
+      })
+    }))
   }))
   if (blocks.length === 1 && others.length === 0) {
     return blocks
@@ -224,8 +227,10 @@ export function skillRefusalSettingsText(blocks: readonly SkillRefusalSettingsBl
   return blocks
     .flatMap((block) => [
       block.headline,
-      ...block.paths.map((path) => `${indent}${path}`),
-      ...(block.next ? [`${indent}${block.next}`] : [])
+      ...block.paths.flatMap(({ path, next }) => [
+        `${indent}${path}`,
+        ...(next ? [`${indent}${next}`] : [])
+      ])
     ])
     .join('\n')
 }

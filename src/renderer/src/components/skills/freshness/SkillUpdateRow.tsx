@@ -17,7 +17,7 @@ import {
   skillPlanHeadline
 } from './skill-plan-op-copy'
 import { skillBackupPaths, type SkillBackupLocation } from './skill-backup-location'
-import { SkillPathText } from './SkillPathText'
+import { SkillRetainedPathLine } from './SkillPathText'
 import { SkillBackupPathLine } from './SkillBackupPathLine'
 
 export type SkillRowPhase = 'plan' | 'pending' | 'result'
@@ -157,7 +157,7 @@ export function SkillUpdateRow({
                   className="flex min-w-0 flex-col gap-0.5"
                 >
                   <span>{lines.reason}</span>
-                  <SkillPathText path={lines.path} homeDirectory={backup.homeDirectory} />
+                  <SkillRetainedPathLine path={lines.path} homeDirectory={backup.homeDirectory} />
                   <span className="text-muted-foreground">{lines.next}</span>
                 </div>
               )

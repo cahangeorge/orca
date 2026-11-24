@@ -21,9 +21,17 @@ import type { SkillBackupLocation } from './skill-backup-location'
 
 export function updatedSkillsLabel(
   summary: BundledSkillResultSummary,
-  t: Translate = translate
+  t: Translate = translate,
+  /** The run moved an old copy aside; with nothing published it is not "Updated 0 skills". */
+  savedOldCopy = false
 ): string {
   const { changedCount, leftAloneCount } = summary
+  if (savedOldCopy && changedCount === 0 && leftAloneCount === 0) {
+    return t(
+      'auto.components.skills.SkillFreshnessUpdateDialog.upToDateOldCopySaved',
+      'Up to date · Old copy saved separately'
+    )
+  }
   const updated = t(
     'auto.components.skills.SkillFreshnessUpdateDialog.updated',
     'Updated {{count}} skills',

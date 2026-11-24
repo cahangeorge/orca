@@ -5,6 +5,7 @@ import type {
   BundledSkillPlan
 } from '../../../../../shared/skills/bundled/bundled-skill-plan'
 import { summarizeBundledSkillPlan } from '../../../../../shared/skills/bundled/bundled-skill-summary'
+import { bundledSkillResultRetainsPaths } from '../../../../../shared/skills/bundled/bundled-skill-backup-refusal'
 import { useSkillFreshness } from '@/hooks/skills/freshness/useSkillFreshness'
 import { useActiveProjectSkillRuntime } from '@/hooks/skills/runtime/useActiveProjectSkillRuntime'
 import { bundledSkillTargetKey } from '@/lib/skills/runtime/bundled-skill-target'
@@ -52,7 +53,7 @@ function RunHeadline({ run }: { run: SkillUpdateRun }): React.JSX.Element | null
     return (
       <div className="flex items-center gap-2 text-sm font-medium text-foreground">
         <CheckCircle2 className="size-4 text-status-success" />
-        {updatedSkillsLabel(run.summary, t)}
+        {updatedSkillsLabel(run.summary, t, bundledSkillResultRetainsPaths(run.result))}
       </div>
     )
   }
@@ -240,10 +241,13 @@ export function SkillFreshnessUpdateDialog(): React.JSX.Element {
   const isRunning = phase === 'pending'
   const showResult = phase === 'result'
   const needsAttention = run.state === 'done' && run.needsAttention
+  // A result naming a moved or kept copy stays through Re-check and new choices; only Done or a
+  // new run replaces it, so its paths never vanish while a preview loads or comes back empty.
+  const resultHoldsPaths = run.state === 'done' && bundledSkillResultRetainsPaths(run.result)
   const livePlan = reviewed.plan
   const canUpdate =
     !isRunning &&
-    (!showResult || needsAttention) &&
+    (!showResult || needsAttention || resultHoldsPaths) &&
     livePlan !== null &&
     !reviewed.loading &&
     summarizeBundledSkillPlan(livePlan).hasWork
@@ -283,7 +287,7 @@ export function SkillFreshnessUpdateDialog(): React.JSX.Element {
   }
 
   const handleRecheck = (): void => {
-    if (targetKey) {
+    if (targetKey && !resultHoldsPaths) {
       acknowledgeSkillUpdateRun(targetKey)
     }
     setForce([])
@@ -293,8 +297,9 @@ export function SkillFreshnessUpdateDialog(): React.JSX.Element {
   const replace = {
     isReplaced: (path: string) => force.includes(path),
     onReplaceChange: (path: string, next: boolean) => {
-      // Why: a choice made on the result starts a new review of the re-planned skills.
-      if (showResult && targetKey) {
+      // Why: a choice made on the result starts a new review of the re-planned skills, unless
+      // the result is the only place its paths are named.
+      if (showResult && targetKey && !resultHoldsPaths) {
         acknowledgeSkillUpdateRun(targetKey)
       }
       setForce((previous) =>

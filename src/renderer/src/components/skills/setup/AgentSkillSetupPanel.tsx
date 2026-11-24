@@ -17,7 +17,7 @@ import { BundledSkillReplaceHint } from './BundledSkillReplaceHint'
 import type { AgentSkillSetupPanelProps } from './agent-skill-setup-panel-props'
 import { Button } from '../../ui/button'
 import {
-  bundledSkillInstallNeedsAttention,
+  bundledSkillInstallBlocksFreshAction,
   useBundledSkillInstall
 } from '@/hooks/skills/installation/use-bundled-skill-install'
 import {
@@ -79,7 +79,7 @@ function BundledAgentSkillSetupPanel({
   const effectivelyInstalled = installed || action.kind === 'none'
   const unsupported = action.kind === 'unsupported' ? action.reason : undefined
   const failed =
-    !unsupported && (bundledSkillInstallNeedsAttention(state) || action.kind === 'attention')
+    !unsupported && (bundledSkillInstallBlocksFreshAction(state) || action.kind === 'attention')
   const installedButton: 'update' | 'replace' | null =
     action.kind === 'run' ? 'update' : action.kind === 'replace' ? 'replace' : null
 

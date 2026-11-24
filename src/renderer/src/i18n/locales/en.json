@@ -6659,6 +6659,7 @@
           "update_other": "{{count}} updates available",
           "current_other": "{{count}} skills are up to date",
           "updated_other": "Updated {{count}} skills",
+          "upToDateOldCopySaved": "Up to date · Old copy saved separately",
           "updateAction_other": "Update {{count}} skills",
           "update_one": "{{count}} update available",
           "current_one": "{{count}} skill is up to date",
