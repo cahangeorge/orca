@@ -1,11 +1,7 @@
 // The agents shared with this Orca account: found on Orca Cloud, paired over Orca Relay, and reached by
 // the window as hosts of their own. A message to a host that is away is held in Orca Cloud.
-import { randomUUID } from 'node:crypto'
-import { z } from 'zod'
 import { openBotTeamShareOffer } from '../../../shared/bots/bot-team-share-seal'
 import {
-  isSharedBotNewChatId,
-  newSharedBotChatId,
   SHARED_BOT_HOST_ERRORS,
   type SharedBotHostView
 } from '../../../shared/bots/shared-bot-hosts'
@@ -21,6 +17,7 @@ import {
   type SharedBotHostEntry
 } from './shared-bot-host-store'
 import {
+  namesSharedBotNewChat,
   SharedBotHeldSends,
   sharedBotFailure as failure,
   sharedBotOffline
@@ -32,14 +29,6 @@ import type { SharedBotHomes } from './shared-bot-home'
 // New shares and invites resolve within this; pairing and held messages are read sooner.
 const IDLE_POLL_MS = 10 * 60 * 1000
 const BUSY_POLL_MS = 30 * 1000
-
-const SessionParams = z.looseObject({ sessionId: z.string() })
-const EnvelopeParams = z.looseObject({ envelope: SessionParams })
-
-/** The chat a call names, as `sessionId` or in its mutation envelope. */
-const sessionIdOf = (params: unknown): string | undefined =>
-  SessionParams.safeParse(params).data?.sessionId ??
-  EnvelopeParams.safeParse(params).data?.envelope.sessionId
 
 export type SharedBotHostsDeps = {
   userDataPath: string
@@ -189,17 +178,12 @@ export class SharedBotHosts {
         return handedOff
       }
     }
-    // A new chat while the host is away: a placeholder until its first held message starts it there.
-    if (method === 'bots.session.start' && link !== 'live' && entry.hostKey) {
-      return {
-        id: method,
-        ok: true,
-        result: { sessionId: newSharedBotChatId(randomUUID()) },
-        _meta: { runtimeId: entry.environmentId }
-      }
+    const local = this.held.answerHere(entry, link, method, params)
+    if (local) {
+      return local
     }
     // The host doesn't know a placeholder chat yet; nothing of it can be read there.
-    if (link !== 'live' || isSharedBotNewChatId(sessionIdOf(params))) {
+    if (link !== 'live' || namesSharedBotNewChat(params)) {
       return sharedBotOffline(entry, method)
     }
     try {
@@ -218,11 +202,7 @@ export class SharedBotHosts {
   ): Promise<() => void> {
     await this.ready()
     const entry = this.entryFor(environmentId)
-    if (
-      !entry ||
-      isSharedBotNewChatId(sessionIdOf(params)) ||
-      (await this.reach(entry)) !== 'live'
-    ) {
+    if (!entry || namesSharedBotNewChat(params) || (await this.reach(entry)) !== 'live') {
       onResponse(
         entry
           ? sharedBotOffline(entry, method)
